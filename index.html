@@ -110,6 +110,9 @@ var store={saveDay:null,saveSettings:null};
 var TYPES={A:'Antrieb & Vitalität',B:'Kognitive Funktionen',C:'Soziale Interaktion',D:'Emotionale Regulation'};
 var TYPEHINT={A:'Morgentief, Entscheidungsunfähigkeit, Körperpflege/Haushalt',B:'Konzentration, Merkfähigkeit, Gedankenschleifen',C:'Rückzug, Angst vor Menschenmengen, Konflikte, Isolation',D:'Panikattacken, Weinerlichkeit, Reizbarkeit, Gefühllosigkeit'};
 var entDraft={typ:'A',int:null,text:'',hilfe:''};var editIdx=null;
+var RB=[['schule','🎓 Schule'],['arbeit','💼 Arbeit'],['fahren','🚆 Fahren'],['stress','⚡ Stress']];
+var RF=[['pos','Positiv','Was lief gut?'],['neg','Negativ','Was lief nicht gut?'],['zeit','Zeitaufwand','z. B. 2 Std. Fahrt, 30 Min. Erholung'],['hilfe','Fremdhilfe','Wer hat geholfen, wobei?']];
+function rv(o,b,f){return o&&o.refl&&o.refl[b]&&o.refl[b][f]||''}
 
 /* ---------- Speicher (Supabase) ---------- */
 var CFG=window.BEFINDEN_CONFIG||{};
@@ -225,7 +228,7 @@ function gaugeSVG(v){
 function moodLabel(v){return v==null?'<small>Bitte einstellen</small>':v+' <small>· '+WORDS[v]+'</small>'}
 
 /* ---------- Heute ---------- */
-function loadDraft(){var d=state.days[state.date];draft=Object.assign({},d&&d[state.slot]||{});dirty=false;msgText=''}
+function loadDraft(){var d=state.days[state.date];draft=JSON.parse(JSON.stringify(d&&d[state.slot]||{}));dirty=false;msgText=''}
 function slider(field,title,hint){
   var v=draft[field],set=isNum(v);
   return '<label class="f">'+title+' <span class="hint">'+hint+'</span></label><div class="row"><input type="range" min="0" max="10" step="1" data-field="'+field+'" value="'+(set?v:5)+'" class="'+(set?'':'unset')+'" aria-label="'+title+'"><span class="val" id="val-'+field+'">'+(set?v:'–')+'</span><button class="ghost" data-act="clear" data-v="'+field+'" aria-label="'+title+' zurücksetzen" style="min-height:36px;padding:4px 10px">×</button></div>';
@@ -243,8 +246,15 @@ function formHTML(){
   }
   if(s==='abend'){
     h+='<div class="card" style="background:var(--soft);margin-top:16px"><h2>Abendreflexion</h2>';
-    h+='<label class="f" style="margin-top:6px">Was lief heute gut?</label><textarea data-field="gut" placeholder="z. B. kleine Erfolge, schöne Momente, was dir geholfen hat">'+esc(draft.gut||'')+'</textarea>';
-    h+='<label class="f">Was lief heute nicht gut?</label><textarea data-field="schlecht" placeholder="z. B. Angstzustände, Schmerzen, was dich belastet oder eingeschränkt hat">'+esc(draft.schlecht||'')+'</textarea>';
+    h+='<p class="hint" style="margin:0 0 4px">Trage ein, was in den Bereichen los war. Leere Felder kannst du einfach auslassen.</p>';
+    RB.forEach(function(b){
+      h+='<div class="entry" style="background:var(--surface)"><b>'+b[1]+'</b>';
+      RF.forEach(function(f){h+='<label class="f" style="margin:10px 0 3px;font-size:14px">'+f[1]+'</label><textarea data-refl="'+b[0]+'.'+f[0]+'" style="min-height:'+(f[0]==='pos'||f[0]==='neg'?'72':'44')+'px" placeholder="'+f[2]+'">'+esc(rv(draft,b[0],f[0]))+'</textarea>'});
+      h+='</div>';
+    });
+    if(draft.gut||draft.schlecht){
+      h+='<div class="entry" style="background:var(--surface)"><b>Allgemein (frühere Einträge)</b><label class="f" style="margin:10px 0 3px;font-size:14px">Gut</label><textarea data-field="gut" style="min-height:60px">'+esc(draft.gut||'')+'</textarea><label class="f" style="margin:10px 0 3px;font-size:14px">Nicht gut</label><textarea data-field="schlecht" style="min-height:60px">'+esc(draft.schlecht||'')+'</textarea></div>';
+    }
     h+='<label class="f">Sonstiges <span class="hint">(privat, z. B. Medikamente, Stress)</span></label><textarea data-field="notiz" style="min-height:64px">'+esc(draft.notiz||'')+'</textarea></div>';
   }else{
     h+='<label class="f">Kurze Notiz <span class="hint">(optional)</span></label><textarea data-field="notiz" style="min-height:64px" placeholder="z. B. Panik am Vormittag, Kopfschmerzen">'+esc(draft.notiz||'')+'</textarea>';
@@ -259,7 +269,7 @@ function slotsHTML(){
 }
 function nudgeHTML(){
   var d=state.days[state.date]||{};
-  if(state.date===todayStr()&&new Date().getHours()>=18&&!(d.abend&&(d.abend.schlecht||d.abend.gut||isNum(d.abend.stimmung))))
+  if(state.date===todayStr()&&new Date().getHours()>=18&&!(d.abend&&(d.abend.schlecht||d.abend.gut||d.abend.refl||isNum(d.abend.stimmung))))
     return '<div class="note">🌙 <b>Abendreflexion:</b> Was ist heute gut gelaufen – und was nicht? Trag es unter „Abends“ ein.</div>';
   return '';
 }
@@ -276,6 +286,7 @@ function updateMood(){
 function doSave(){
   if(!isNum(draft.stimmung)){setMsg('Bitte zuerst die Stimmung einstellen.');return}
   var rec={};Object.keys(draft).forEach(function(k){var v=draft[k];if(v!==null&&v!==undefined&&v!==''&&!(typeof v==='number'&&!isFinite(v)))rec[k]=v});
+  if(rec.refl){var cl={};Object.keys(rec.refl).forEach(function(b){var o={};Object.keys(rec.refl[b]||{}).forEach(function(f){var v=String(rec.refl[b][f]||'').trim();if(v)o[f]=v});if(Object.keys(o).length)cl[b]=o});if(Object.keys(cl).length)rec.refl=cl;else delete rec.refl}
   rec.ts=new Date().toISOString();
   var day=Object.assign({},state.days[state.date]||{});
   day.date=state.date;day[state.slot]=rec;
@@ -339,7 +350,7 @@ function verlaufList(){
   keys.forEach(function(k){var d=state.days[k];
     var dots=SL.map(function(s){var v=d[s]&&d[s].stimmung;return '<span class="dot" title="'+SLN[s]+'" style="'+(isNum(v)?'background:'+moodColor(v)+';border-color:'+moodColor(v):'')+'"></span>'}).join('');
     var a=dayAvg(d,'stimmung'),an=dayAvg(d,'angst'),sc=dayAvg(d,'schmerz');
-    h+='<button class="item" data-act="open" data-v="'+k+'"><b>'+esc(dlong(k))+'</b> <span class="dots">'+dots+'</span><br><span class="hint">Ø Stimmung '+fmt(a)+' · Angst '+fmt(an)+' · Schmerz '+fmt(sc)+(d.abend&&d.abend.schlecht?' · Reflexion ✓':'')+(d.eintraege&&d.eintraege.length?' · '+d.eintraege.length+' Beeinträchtigung'+(d.eintraege.length>1?'en':''):'')+'</span></button>';
+    h+='<button class="item" data-act="open" data-v="'+k+'"><b>'+esc(dlong(k))+'</b> <span class="dots">'+dots+'</span><br><span class="hint">Ø Stimmung '+fmt(a)+' · Angst '+fmt(an)+' · Schmerz '+fmt(sc)+(d.abend&&(d.abend.schlecht||d.abend.refl)?' · Reflexion ✓':'')+(d.eintraege&&d.eintraege.length?' · '+d.eintraege.length+' Beeinträchtigung'+(d.eintraege.length>1?'en':''):'')+'</span></button>';
   });
   return h+'</div>';
 }
@@ -409,6 +420,16 @@ function reportHTML(full){
     var rows=m.keys.filter(function(k){var a=state.days[k].abend;return a&&a[field]});
     if(!rows.length)return '';
     return '<h3>'+title+'</h3>'+rows.map(function(k){return '<p><b>'+dshort(k)+':</b> '+esc(state.days[k].abend[field]).replace(/\n/g,'<br>')+'</p>'}).join('');
+  }
+  var rrows=m.keys.filter(function(k){return state.days[k].abend&&state.days[k].abend.refl});
+  if(rrows.length){
+    h+='<h3>Abendreflexion nach Bereichen</h3>';
+    RB.forEach(function(b){
+      var items=rrows.map(function(k){var r=state.days[k].abend.refl[b[0]];if(!r)return '';
+        var parts=[];RF.forEach(function(f){if(r[f[0]]&&((f[0]==='pos'&&o.gut)||(f[0]==='neg'&&o.nicht)||f[0]==='zeit'||f[0]==='hilfe'))parts.push('<i>'+f[1]+':</i> '+esc(r[f[0]]).replace(/\n/g,'<br>'));});
+        return parts.length?'<p><b>'+dshort(k)+':</b> '+parts.join(' · ')+'</p>':''}).join('');
+      if(items)h+='<h4 style="margin:10px 0 2px;font-size:14px">'+b[1].replace(/^\S+\s/,'')+'</h4>'+items;
+    });
   }
   if(o.nicht)h+=refl('schlecht','Was am Tag nicht gut lief (Abendreflexion)');
   if(o.gut)h+=refl('gut','Was am Tag gut lief (Abendreflexion)');
@@ -510,6 +531,8 @@ document.addEventListener('click',function(ev){
 document.addEventListener('input',function(ev){
   var t=ev.target,f=t.getAttribute&&t.getAttribute('data-field');
   var fe=t.getAttribute&&t.getAttribute('data-ent');
+  var fr=t.getAttribute&&t.getAttribute('data-refl');
+  if(fr){var pr=fr.split('.');draft.refl=draft.refl||{};draft.refl[pr[0]]=draft.refl[pr[0]]||{};draft.refl[pr[0]][pr[1]]=t.value;dirty=true;return}
   if(fe){if(fe==='int'){entDraft.int=+t.value;t.classList.remove('unset');var ve=document.getElementById('val-ent');if(ve)ve.textContent=t.value}else entDraft[fe]=t.value;return}
   if(f){
     if(t.type==='range'){draft[f]=+t.value;t.classList.remove('unset');var vl=document.getElementById('val-'+f);if(vl)vl.textContent=t.value;if(f==='stimmung')updateMood()}
