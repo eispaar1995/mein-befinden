@@ -69,7 +69,7 @@ td.n,th.n{text-align:center;white-space:nowrap}
 .preview p{margin:4px 0}
 .btns{display:grid;gap:8px;margin-top:10px}
 h2{font-size:17px;margin:0 0 6px}
-.rtable{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);-webkit-overflow-scrolling:touch}.rtable table{min-width:640px;table-layout:fixed}.rtable th{font-size:13px;padding:8px 6px;background:var(--bg)}.rtable td{padding:4px;border-left:1px solid var(--line)}.rtable th.rrow{width:76px;text-align:center;position:sticky;left:0;z-index:1;border-bottom:1px solid var(--line)}.rtable .ri{font-size:22px}.rtable textarea{min-height:88px;font-size:14px;padding:6px;border-radius:8px}.smrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 10px}.smrow button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 2px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;font:inherit;font-size:12px;min-height:74px}.smrow .sme{font-size:34px;line-height:1.1}.smrow button[aria-pressed=true]{border:2px solid var(--btn);background:var(--soft);font-weight:600}.entry{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--bg)}
+.rtable{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface);-webkit-overflow-scrolling:touch}.rtable table{min-width:640px;table-layout:fixed}.rtable th{font-size:13px;padding:8px 6px;background:var(--bg)}.rtable td{padding:4px;border-left:1px solid var(--line)}.rtable th.rrow{width:76px;text-align:center;position:sticky;left:0;z-index:1;border-bottom:1px solid var(--line)}.rtable .ri{font-size:22px}.rtable textarea{min-height:88px;font-size:14px;padding:6px;border-radius:8px}.smrow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 10px}.smrow button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 2px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;font:inherit;font-size:12px;min-height:74px}.smrow .sme{font-size:34px;line-height:1.1}.smrow button[aria-pressed=true]{border:2px solid var(--btn);background:var(--soft);font-weight:600}.rl{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}.rl.pos{color:var(--s3)}.rl.neg{color:var(--s2)}.entry{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--bg)}
 </style>
 </head>
 <body>
@@ -250,11 +250,10 @@ function formHTML(){
   }
   if(s==='abend'){
     h+='<div class="card" style="background:var(--soft);margin-top:16px"><h2>Abendreflexion</h2>';
+    h+='<div class="entry" style="background:var(--surface);margin-top:0"><b>Der Tag insgesamt</b><label class="rl pos" style="margin-top:10px">👍 Positiv</label><textarea data-field="gut" style="min-height:72px" placeholder="Was lief heute gut?">'+esc(draft.gut||'')+'</textarea><label class="rl neg">👎 Negativ</label><textarea data-field="schlecht" style="min-height:72px" placeholder="Was lief heute nicht gut?">'+esc(draft.schlecht||'')+'</textarea></div>';
+    h+='<p class="hint" style="margin:10px 0 4px"><b>Nach Bereichen</b></p>';
     h+='<div class="rtable"><table><thead><tr><th></th>'+RF.map(function(f){return '<th>'+f[1]+'</th>'}).join('')+'</tr></thead><tbody>'+RB.map(function(b){
       return '<tr><th class="rrow"><span class="ri">'+b[1].split(' ')[0]+'</span><br>'+b[1].replace(/^\S+\s/,'')+'</th>'+RF.map(function(f){return '<td><textarea data-refl="'+b[0]+'.'+f[0]+'" placeholder="'+(f[0]==='zeit'?'z. B. 2 Std.':(f[0]==='hilfe'?'Wer, wobei?':'…'))+'">'+esc(rv(draft,b[0],f[0]))+'</textarea></td>'}).join('')+'</tr>'}).join('')+'</tbody></table></div><p class="hint" style="margin:4px 0 0">Nach rechts wischen, um alle Spalten zu sehen. Leere Felder kannst du auslassen.</p>';
-    if(draft.gut||draft.schlecht){
-      h+='<div class="entry" style="background:var(--surface)"><b>Allgemein (frühere Einträge)</b><label class="f" style="margin:10px 0 3px;font-size:14px">Gut</label><textarea data-field="gut" style="min-height:60px">'+esc(draft.gut||'')+'</textarea><label class="f" style="margin:10px 0 3px;font-size:14px">Nicht gut</label><textarea data-field="schlecht" style="min-height:60px">'+esc(draft.schlecht||'')+'</textarea></div>';
-    }
     h+='<label class="f">Sonstiges <span class="hint">(privat, z. B. Medikamente, Stress)</span></label><textarea data-field="notiz" style="min-height:64px">'+esc(draft.notiz||'')+'</textarea></div>';
   }else{
     h+='<label class="f">Kurze Notiz <span class="hint">(optional)</span></label><textarea data-field="notiz" style="min-height:64px" placeholder="z. B. Panik am Vormittag, Kopfschmerzen">'+esc(draft.notiz||'')+'</textarea>';
@@ -467,8 +466,8 @@ function reportHTML(full){
       if(items)h+='<h4 style="margin:10px 0 2px;font-size:14px">'+b[1].replace(/^\S+\s/,'')+'</h4>'+items;
     });
   }
-  if(o.nicht)h+=refl('schlecht','Was am Tag nicht gut lief (Abendreflexion)');
-  if(o.gut)h+=refl('gut','Was am Tag gut lief (Abendreflexion)');
+  if(o.nicht)h+=refl('schlecht','Negativ: Was am Tag nicht gut lief (Abendreflexion)');
+  if(o.gut)h+=refl('gut','Positiv: Was am Tag gut lief (Abendreflexion)');
   if(o.notiz){
     var nr=m.keys.map(function(k){var d=state.days[k],t=[];SL.forEach(function(s){if(d[s]&&d[s].notiz)t.push(SLN[s]+': '+d[s].notiz)});return t.length?'<p><b>'+dshort(k)+':</b> '+esc(t.join(' | ')).replace(/\n/g,'<br>')+'</p>':''}).join('');
     if(nr)h+='<h3>Notizen</h3>'+nr;
