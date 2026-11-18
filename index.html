@@ -342,14 +342,14 @@ function entCSV(){
 /* ---------- Medikation ---------- */
 var MSLOT=[['morgen','Morgens'],['mittag','Mittags'],['abend','Abends']];
 function medsHTML(){
-  var d=state.days[state.date]||{},tk=d.meds||{},h='<h2>Medikation und Supplemente</h2>',any=false;
+  var d=state.days[state.date]||{},tk=d.meds||{},h='<h2>Medikation</h2>',any=false;
   MSLOT.forEach(function(g){
     var l=state.meds.filter(function(m){return m.slot===g[0]&&m.name});
     if(!l.length)return;any=true;
     h+='<label class="f" style="margin:10px 0 2px">'+g[1]+'</label>'+l.map(function(m){
-      return '<div class="check"><input type="checkbox" id="med-'+esc(m.id)+'" data-med="'+esc(m.id)+'" '+(tk[m.id]&&tk[m.id].taken?'checked':'')+'><label for="med-'+esc(m.id)+'">'+esc(m.name)+(m.dose?' '+esc(m.dose):'')+(m.kind==='supp'?' <span class="hint">(Supplement)</span>':'')+'</label></div>'}).join('');
+      return '<div class="check"><input type="checkbox" id="med-'+esc(m.id)+'" data-med="'+esc(m.id)+'" '+(tk[m.id]&&tk[m.id].taken?'checked':'')+'><label for="med-'+esc(m.id)+'">'+esc(m.name)+(m.dose?' '+esc(m.dose):'')+'</label></div>'}).join('');
   });
-  if(!any)h+='<p class="hint" style="margin-top:0">Noch nichts eingetragen. Lege deine Medikamente und Supplemente im Verlauf unter „Medikamente verwalten“ an.</p>';
+  if(!any)h+='<p class="hint" style="margin-top:0">Noch nichts eingetragen. Lege deine Medikamente im Verlauf unter „Medikamente verwalten“ an.</p>';
   var bl=d.bedarf||[];
   h+='<label class="f">Bei Bedarf eingenommen</label>';
   bl.forEach(function(b,i){h+='<div class="entry"><div class="row sb"><b>'+esc(b.name)+(b.menge?' · '+esc(b.menge):'')+(b.zeit?' · '+esc(b.zeit)+' Uhr':'')+'</b><button class="ghost" data-act="delbedarf" data-v="'+i+'" style="min-height:36px;padding:4px 10px">Entfernen</button></div>'+(b.wirkung?'<div class="hint" style="margin-top:4px">Wirkung / Nebenwirkung: '+esc(b.wirkung)+'</div>':'')+'</div>'});
@@ -380,9 +380,9 @@ function delBedarf(i){
 function medManageHTML(){
   var h='<div class="card" id="medmanage"><h2>Medikamente verwalten</h2><p class="hint" style="margin-top:0">Diese Liste erscheint unter „Heute“ zum Abhaken. Bei Änderungen bleiben frühere Tage unverändert.</p>';
   state.meds.forEach(function(m){
-    h+='<div class="entry"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="text" data-mf="'+esc(m.id)+'.name" value="'+esc(m.name)+'" placeholder="Name" aria-label="Name"><input type="text" data-mf="'+esc(m.id)+'.dose" value="'+esc(m.dose||'')+'" placeholder="Dosis, z. B. 25 mg" aria-label="Dosis"><select data-mf="'+esc(m.id)+'.slot" aria-label="Zeitpunkt" style="font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)">'+MSLOT.map(function(g){return '<option value="'+g[0]+'"'+(m.slot===g[0]?' selected':'')+'>'+g[1]+'</option>'}).join('')+'</select><select data-mf="'+esc(m.id)+'.kind" aria-label="Art" style="font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)"><option value="med"'+(m.kind!=='supp'?' selected':'')+'>Medikament</option><option value="supp"'+(m.kind==='supp'?' selected':'')+'>Supplement</option></select></div><div style="margin-top:8px"><button class="ghost" data-act="delmed" data-v="'+esc(m.id)+'" style="min-height:36px;padding:4px 10px">Entfernen</button></div></div>';
+    h+='<div class="entry"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="text" data-mf="'+esc(m.id)+'.name" value="'+esc(m.name)+'" placeholder="Name" aria-label="Name"><input type="text" data-mf="'+esc(m.id)+'.dose" value="'+esc(m.dose||'')+'" placeholder="Dosis, z. B. 25 mg" aria-label="Dosis"><select data-mf="'+esc(m.id)+'.slot" aria-label="Zeitpunkt" style="font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)">'+MSLOT.map(function(g){return '<option value="'+g[0]+'"'+(m.slot===g[0]?' selected':'')+'>'+g[1]+'</option>'}).join('')+'</select></div><div style="margin-top:8px"><button class="ghost" data-act="delmed" data-v="'+esc(m.id)+'" style="min-height:36px;padding:4px 10px">Entfernen</button></div></div>';
   });
-  h+='<button class="ghost" data-act="addmed" style="width:100%">+ Medikament oder Supplement hinzufügen</button><div class="msg" id="mgmsg" role="status"></div></div>';
+  h+='<button class="ghost" data-act="addmed" style="width:100%">+ Medikament hinzufügen</button><div class="msg" id="mgmsg" role="status"></div></div>';
   return h;
 }
 function medStats(keys){
@@ -394,9 +394,9 @@ function medReportHTML(keys){
   var st=medStats(keys),ids=Object.keys(st),bed=[];
   keys.forEach(function(k){(state.days[k].bedarf||[]).forEach(function(b){bed.push({k:k,b:b})})});
   if(!ids.length&&!bed.length)return '';
-  var h='<h3>Medikation und Supplemente</h3>';
+  var h='<h3>Medikation</h3>';
   if(ids.length){
-    h+='<p style="font-size:12px;margin:2px 0">Angaben aus meiner Selbstdokumentation: an wie vielen der '+keys.length+' dokumentierten Tage ich die Einnahme als erfolgt markiert habe.</p><table><tr><th>Präparat</th><th class="n">Einnahme markiert</th></tr>'+ids.map(function(id){var x=st[id];return '<tr><td>'+esc(x.name)+(x.dose?' '+esc(x.dose):'')+(x.kind==='supp'?' (Supplement)':'')+'</td><td class="n">'+x.taken+' von '+keys.length+' Tagen</td></tr>'}).join('')+'</table>';
+    h+='<p style="font-size:12px;margin:2px 0">Angaben aus meiner Selbstdokumentation: an wie vielen der '+keys.length+' dokumentierten Tage ich die Einnahme als erfolgt markiert habe.</p><table><tr><th>Präparat</th><th class="n">Einnahme markiert</th></tr>'+ids.map(function(id){var x=st[id];return '<tr><td>'+esc(x.name)+(x.dose?' '+esc(x.dose):'')+'</td><td class="n">'+x.taken+' von '+keys.length+' Tagen</td></tr>'}).join('')+'</table>';
   }
   if(bed.length){
     h+='<p style="font-size:12px;margin:8px 0 2px">Bei Bedarf eingenommen:</p><table><tr><th>Datum</th><th>Präparat</th><th>Menge</th><th>Uhrzeit</th><th>Wirkung</th></tr>'+bed.map(function(x){return '<tr><td>'+dshort(x.k).slice(0,6)+dshort(x.k).slice(8)+'</td><td>'+esc(x.b.name)+'</td><td>'+esc(x.b.menge||'')+'</td><td>'+esc(x.b.zeit||'')+'</td><td>'+esc(x.b.wirkung||'')+'</td></tr>'}).join('')+'</table>';
@@ -564,7 +564,7 @@ function auswertungHTML(){
    '<label class="f">Aktenzeichen</label><input type="text" id="saz" value="'+esc(S.az||'')+'">'+
    '<div class="check"><input type="checkbox" id="o-nicht" '+(state.opt.nicht?'checked':'')+'><label for="o-nicht">„Was nicht gut lief“ aufnehmen</label></div>'+
    '<div class="check"><input type="checkbox" id="o-gut" '+(state.opt.gut?'checked':'')+'><label for="o-gut">„Was gut lief“ aufnehmen</label></div>'+
-   '<div class="check"><input type="checkbox" id="o-med" '+(state.opt.med?'checked':'')+'><label for="o-med">Medikation und Supplemente aufnehmen</label></div>'+
+   '<div class="check"><input type="checkbox" id="o-med" '+(state.opt.med?'checked':'')+'><label for="o-med">Medikation aufnehmen</label></div>'+
    '<div class="check"><input type="checkbox" id="o-notiz" '+(state.opt.notiz?'checked':'')+'><label for="o-notiz">Notizen und Sonstiges aufnehmen</label></div>'+
    '<div class="preview" id="preview">'+reportHTML(false)+'</div>'+
    '<div class="btns"><button class="ghost" data-act="copy">Bericht kopieren</button><button class="primary" data-act="pdf">Als PDF speichern oder drucken</button><button class="ghost" data-act="dlhtml" id="dlhtml">Als Datei speichern (HTML)</button><button class="ghost" data-act="dlcsv" id="dlcsv">Tabelle speichern (CSV für Excel)</button><button class="ghost" data-act="dlent">Beeinträchtigungen speichern (CSV wie Symptomtagebuch)</button></div><div class="msg" id="rmsg" role="status"></div><textarea id="fallback" style="display:none;margin-top:8px" readonly></textarea></div>';
