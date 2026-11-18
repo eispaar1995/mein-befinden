@@ -104,7 +104,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function fmt(v,d){if(v==null)return '–';d=d==null?1:d;return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function isNum(v){return typeof v==='number'&&isFinite(v)}
 
-var state={days:{},settings:{name:'Marie Janzen',az:'42S0616478'},date:todayStr(),slot:autoSlot(),tab:'heute',profile:'gdb',range:'30',from:'',to:'',opt:{nicht:true,gut:true,notiz:false},mode:'local'};
+var state={days:{},settings:{name:'Marie Janzen',az:'42S0616478'},date:todayStr(),slot:autoSlot(),tab:'heute',profile:'gdb',range:'30',from:'',to:'',opt:{nicht:true,gut:true,notiz:false,med:false},meds:[],mode:'local'};
 var draft={},dirty=false,msgText='';
 var store={saveDay:null,saveSettings:null};
 var TYPES={A:'Antrieb & Vitalität',B:'Kognitive Funktionen',C:'Soziale Interaktion',D:'Emotionale Regulation'};
@@ -120,8 +120,8 @@ function rv(o,b,f){return o&&o.refl&&o.refl[b]&&o.refl[b][f]||''}
 /* ---------- Speicher (Supabase) ---------- */
 var CFG=window.BEFINDEN_CONFIG||{};
 var sb=null,uid=null;
-function localLoad(){try{var j=JSON.parse(localStorage.getItem(LS_KEY)||'null');if(j){state.days=j.days||{};if(j.settings)state.settings=Object.assign(state.settings,j.settings)}}catch(e){}}
-function localSave(){try{localStorage.setItem(LS_KEY,JSON.stringify({days:state.days,settings:state.settings}))}catch(e){}}
+function localLoad(){try{var j=JSON.parse(localStorage.getItem(LS_KEY)||'null');if(j){state.days=j.days||{};if(j.settings)state.settings=Object.assign(state.settings,j.settings);if(Array.isArray(j.meds))state.meds=j.meds}}catch(e){}}
+function localSave(){try{localStorage.setItem(LS_KEY,JSON.stringify({days:state.days,settings:state.settings,meds:state.meds}))}catch(e){}}
 var q=Promise.resolve();
 function enqueue(fn){var p=q.then(fn);q=p.catch(function(){});return p}
 store.saveDay=function(date,obj){
@@ -133,7 +133,7 @@ store.saveDay=function(date,obj){
 store.saveSettings=function(){
   if(state.mode==='demo')return Promise.resolve();
   localSave();
-  return enqueue(function(){return sb.from('settings').upsert({user_id:uid,name:state.settings.name||'',az:state.settings.az||''},{onConflict:'user_id'}).then(function(r){if(r.error)throw r.error})});
+  return enqueue(function(){return sb.from('settings').upsert({user_id:uid,name:state.settings.name||'',az:state.settings.az||'',meds:state.meds},{onConflict:'user_id'}).then(function(r){if(r.error)throw r.error})});
 };
 function setStatus(t){var e=document.getElementById('status');if(e)e.textContent=t}
 function loginHTML(msg){
@@ -143,8 +143,8 @@ async function loadAll(){
   var r=await sb.from('days').select('date,data').order('date');
   if(r.error)throw r.error;
   var m={};r.data.forEach(function(x){m[x.date]=x.data});state.days=m;
-  var s2=await sb.from('settings').select('name,az').maybeSingle();
-  if(s2.data)state.settings=Object.assign(state.settings,{name:s2.data.name||state.settings.name,az:s2.data.az||state.settings.az});
+  var s2=await sb.from('settings').select('name,az,meds').maybeSingle();
+  if(s2.data){state.settings=Object.assign(state.settings,{name:s2.data.name||state.settings.name,az:s2.data.az||state.settings.az});state.meds=Array.isArray(s2.data.meds)?s2.data.meds:[]}
   localSave();
 }
 async function startSession(session){
@@ -166,7 +166,7 @@ async function doLogin(){
 async function doLogout(){await sb.auth.signOut();try{localStorage.removeItem(LS_KEY)}catch(e){}state.days={};uid=null;showLogin()}
 function showLogin(msg){document.getElementById('tabs').style.display='none';document.getElementById('view').innerHTML=loginHTML(msg);setStatus('Nicht angemeldet')}
 async function connect(){
-  if(CFG.demo){state.mode='demo';state.days=CFG.demoDays||{};setStatus('Vorschau mit Beispieldaten – nichts wird gespeichert.');document.getElementById('tabs').style.display='';loadDraft();renderView();return}
+  if(CFG.demo){state.mode='demo';state.days=CFG.demoDays||{};state.meds=[{id:'m1',name:'Bupropion',dose:'150 mg',slot:'morgen',kind:'med'},{id:'m2',name:'Sertralin',dose:'150 mg',slot:'morgen',kind:'med'},{id:'m3',name:'Promethazin',dose:'25 mg',slot:'abend',kind:'med'}];setStatus('Vorschau mit Beispieldaten – nichts wird gespeichert.');document.getElementById('tabs').style.display='';loadDraft();renderView();return}
   if(!window.supabase){showLogin('Die Verbindung konnte nicht geladen werden. Bitte Internet prüfen und neu laden.');return}
   sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true}});
   var r=await sb.auth.getSession();
@@ -274,7 +274,7 @@ function nudgeHTML(){
 }
 function heuteHTML(){
   var isToday=state.date===todayStr();
-  return '<div class="card"><div class="datebar"><button class="ghost" data-act="prev" aria-label="Vorheriger Tag">‹</button><div class="d" id="dlabel">'+esc(dlong(state.date))+'</div><button class="ghost" data-act="next" aria-label="Nächster Tag" '+(isToday?'disabled':'')+'>›</button></div>'+(isToday?'':'<div style="text-align:center;margin-top:6px"><button class="ghost" data-act="today">Zu heute</button></div>')+'</div><div id="nudge">'+nudgeHTML()+'</div><div class="slots" id="slots" role="tablist">'+slotsHTML()+'</div><div class="card" id="form">'+formHTML()+'</div><div class="card" id="ents">'+entsHTML()+'</div>';
+  return '<div class="card"><div class="datebar"><button class="ghost" data-act="prev" aria-label="Vorheriger Tag">‹</button><div class="d" id="dlabel">'+esc(dlong(state.date))+'</div><button class="ghost" data-act="next" aria-label="Nächster Tag" '+(isToday?'disabled':'')+'>›</button></div>'+(isToday?'':'<div style="text-align:center;margin-top:6px"><button class="ghost" data-act="today">Zu heute</button></div>')+'</div><div id="nudge">'+nudgeHTML()+'</div><div class="slots" id="slots" role="tablist">'+slotsHTML()+'</div><div class="card" id="form">'+formHTML()+'</div><div class="card" id="meds">'+medsHTML()+'</div><div class="card" id="ents">'+entsHTML()+'</div>';
 }
 function updateMood(){
   var v=isNum(draft.stimmung)?draft.stimmung:null;
@@ -339,12 +339,77 @@ function entCSV(){
   return '﻿'+rows.map(function(r){return r.map(function(c){c=String(c).replace(/"/g,'""');return /[;"\n]/.test(c)?'"'+c+'"':c}).join(';')}).join('\r\n');
 }
 
+/* ---------- Medikation ---------- */
+var MSLOT=[['morgen','Morgens'],['mittag','Mittags'],['abend','Abends']];
+function medsHTML(){
+  var d=state.days[state.date]||{},tk=d.meds||{},h='<h2>Medikation und Supplemente</h2>',any=false;
+  MSLOT.forEach(function(g){
+    var l=state.meds.filter(function(m){return m.slot===g[0]&&m.name});
+    if(!l.length)return;any=true;
+    h+='<label class="f" style="margin:10px 0 2px">'+g[1]+'</label>'+l.map(function(m){
+      return '<div class="check"><input type="checkbox" id="med-'+esc(m.id)+'" data-med="'+esc(m.id)+'" '+(tk[m.id]&&tk[m.id].taken?'checked':'')+'><label for="med-'+esc(m.id)+'">'+esc(m.name)+(m.dose?' '+esc(m.dose):'')+(m.kind==='supp'?' <span class="hint">(Supplement)</span>':'')+'</label></div>'}).join('');
+  });
+  if(!any)h+='<p class="hint" style="margin-top:0">Noch nichts eingetragen. Lege deine Medikamente und Supplemente im Verlauf unter „Medikamente verwalten“ an.</p>';
+  var bl=d.bedarf||[];
+  h+='<label class="f">Bei Bedarf eingenommen</label>';
+  bl.forEach(function(b,i){h+='<div class="entry"><div class="row sb"><b>'+esc(b.name)+(b.menge?' · '+esc(b.menge):'')+(b.zeit?' · '+esc(b.zeit)+' Uhr':'')+'</b><button class="ghost" data-act="delbedarf" data-v="'+i+'" style="min-height:36px;padding:4px 10px">Entfernen</button></div>'+(b.wirkung?'<div class="hint" style="margin-top:4px">Wirkung / Nebenwirkung: '+esc(b.wirkung)+'</div>':'')+'</div>'});
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="text" id="bname" placeholder="Was?" aria-label="Was"><input type="text" id="bmenge" placeholder="Menge" aria-label="Menge"><input type="time" id="bzeit" aria-label="Uhrzeit" style="width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)"><input type="text" id="bwirk" placeholder="Wirkung (optional)" aria-label="Wirkung"></div>';
+  h+='<div style="margin-top:10px"><button class="ghost" data-act="addbedarf" style="width:100%">Bedarfsmedikation eintragen</button></div><div class="msg" id="mmsg" role="status"></div>';
+  return h;
+}
+function rerenderMeds(){var e=document.getElementById('meds');if(e)e.innerHTML=medsHTML()}
+function toggleMed(id,checked){
+  var m=state.meds.filter(function(x){return x.id===id})[0];if(!m)return;
+  var day=Object.assign({},state.days[state.date]||{});day.date=state.date;
+  day.meds=Object.assign({},day.meds);day.meds[id]={name:m.name,dose:m.dose||'',slot:m.slot,kind:m.kind||'med',taken:!!checked};
+  store.saveDay(state.date,day).then(function(){var x=document.getElementById('mmsg');if(x)x.textContent='Gespeichert ✓'}).catch(function(){var x=document.getElementById('mmsg');if(x)x.textContent='Speichern hat nicht geklappt. Bitte noch einmal versuchen.'});
+}
+function addBedarf(){
+  var g=function(i){var e=document.getElementById(i);return e?e.value.trim():''};
+  var m=document.getElementById('mmsg');
+  if(!g('bname')){m.textContent='Bitte angeben, was du genommen hast.';return}
+  var day=Object.assign({},state.days[state.date]||{});day.date=state.date;
+  day.bedarf=(day.bedarf||[]).concat([{name:g('bname'),menge:g('bmenge'),zeit:g('bzeit'),wirkung:g('bwirk')}]);
+  store.saveDay(state.date,day).then(function(){rerenderMeds();var x=document.getElementById('mmsg');if(x)x.textContent='Eintrag gespeichert ✓'}).catch(function(){m.textContent='Speichern hat nicht geklappt. Bitte noch einmal versuchen.'});
+}
+function delBedarf(i){
+  if(!confirm('Diesen Eintrag wirklich entfernen?'))return;
+  var day=Object.assign({},state.days[state.date]||{});var l=(day.bedarf||[]).slice();l.splice(i,1);day.bedarf=l;
+  store.saveDay(state.date,day).then(rerenderMeds);
+}
+function medManageHTML(){
+  var h='<div class="card" id="medmanage"><h2>Medikamente verwalten</h2><p class="hint" style="margin-top:0">Diese Liste erscheint unter „Heute“ zum Abhaken. Bei Änderungen bleiben frühere Tage unverändert.</p>';
+  state.meds.forEach(function(m){
+    h+='<div class="entry"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><input type="text" data-mf="'+esc(m.id)+'.name" value="'+esc(m.name)+'" placeholder="Name" aria-label="Name"><input type="text" data-mf="'+esc(m.id)+'.dose" value="'+esc(m.dose||'')+'" placeholder="Dosis, z. B. 25 mg" aria-label="Dosis"><select data-mf="'+esc(m.id)+'.slot" aria-label="Zeitpunkt" style="font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)">'+MSLOT.map(function(g){return '<option value="'+g[0]+'"'+(m.slot===g[0]?' selected':'')+'>'+g[1]+'</option>'}).join('')+'</select><select data-mf="'+esc(m.id)+'.kind" aria-label="Art" style="font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)"><option value="med"'+(m.kind!=='supp'?' selected':'')+'>Medikament</option><option value="supp"'+(m.kind==='supp'?' selected':'')+'>Supplement</option></select></div><div style="margin-top:8px"><button class="ghost" data-act="delmed" data-v="'+esc(m.id)+'" style="min-height:36px;padding:4px 10px">Entfernen</button></div></div>';
+  });
+  h+='<button class="ghost" data-act="addmed" style="width:100%">+ Medikament oder Supplement hinzufügen</button><div class="msg" id="mgmsg" role="status"></div></div>';
+  return h;
+}
+function medStats(keys){
+  var st={};
+  keys.forEach(function(k){var d=state.days[k];if(!d.meds)return;Object.keys(d.meds).forEach(function(id){var e=d.meds[id];st[id]=st[id]||{name:e.name,dose:e.dose,slot:e.slot,kind:e.kind,taken:0};st[id].name=e.name;st[id].dose=e.dose;if(e.taken)st[id].taken++})});
+  return st;
+}
+function medReportHTML(keys){
+  var st=medStats(keys),ids=Object.keys(st),bed=[];
+  keys.forEach(function(k){(state.days[k].bedarf||[]).forEach(function(b){bed.push({k:k,b:b})})});
+  if(!ids.length&&!bed.length)return '';
+  var h='<h3>Medikation und Supplemente</h3>';
+  if(ids.length){
+    h+='<p style="font-size:12px;margin:2px 0">Angaben aus meiner Selbstdokumentation: an wie vielen der '+keys.length+' dokumentierten Tage ich die Einnahme als erfolgt markiert habe.</p><table><tr><th>Präparat</th><th class="n">Einnahme markiert</th></tr>'+ids.map(function(id){var x=st[id];return '<tr><td>'+esc(x.name)+(x.dose?' '+esc(x.dose):'')+(x.kind==='supp'?' (Supplement)':'')+'</td><td class="n">'+x.taken+' von '+keys.length+' Tagen</td></tr>'}).join('')+'</table>';
+  }
+  if(bed.length){
+    h+='<p style="font-size:12px;margin:8px 0 2px">Bei Bedarf eingenommen:</p><table><tr><th>Datum</th><th>Präparat</th><th>Menge</th><th>Uhrzeit</th><th>Wirkung</th></tr>'+bed.map(function(x){return '<tr><td>'+dshort(x.k).slice(0,6)+dshort(x.k).slice(8)+'</td><td>'+esc(x.b.name)+'</td><td>'+esc(x.b.menge||'')+'</td><td>'+esc(x.b.zeit||'')+'</td><td>'+esc(x.b.wirkung||'')+'</td></tr>'}).join('')+'</table>';
+  }
+  return h;
+}
+
 /* ---------- Verlauf ---------- */
 var LB='befinden_last_backup';
 function lastBackup(){try{return localStorage.getItem(LB)}catch(e){return null}}
 function backupJSON(){return JSON.stringify({app:'Mein Befinden',format:1,exportedAt:new Date().toISOString(),settings:state.settings,days:state.days},null,2)}
 function backupCard(){var lb=lastBackup(),old=!lb||(pdate(todayStr())-pdate(lb))/864e5>=7;return '<div class="card"><h2>Datensicherung</h2>'+(old?'<div class="note">Dein letztes Backup auf diesem Gerät ist '+(lb?'vom '+dshort(lb):'noch nicht gemacht')+'. Einmal pro Woche ist sinnvoll.</div>':'<p class="hint" style="margin:0 0 6px">Letztes Backup: '+dshort(lb)+'</p>')+'<p class="hint" style="margin-top:0">Zusätzlich legt die Datenbank jeden Sonntag automatisch eine Sicherungskopie an (26 Wochen aufbewahrt).</p><p class="hint" style="margin-top:0">Speichert alle Einträge und Einstellungen als Datei ('+Object.keys(state.days).length+' Tage). Bewahre sie sicher auf, sie enthält deine Gesundheitsdaten.</p><button class="ghost" data-act="backup" style="width:100%">Backup herunterladen (JSON)</button><div class="msg" id="bmsg" role="status"></div></div>'}
-function verlaufHTML(){return verlaufList()+backupCard()}
+function verlaufHTML(){return verlaufList()+medManageHTML()+backupCard()}
 function verlaufList(){
   var keys=Object.keys(state.days).sort().reverse();
   if(!keys.length)return '<div class="card">Noch keine Einträge. Starte unter „Heute“ mit deinem ersten Check-in.</div>';
@@ -445,6 +510,7 @@ function reportHTML(full){
   h+='<p>Die folgenden Angaben beruhen auf meiner täglichen Selbsteinschätzung (morgens, mittags, abends) auf einer Skala von 0 bis 10. Stimmung: 0 = sehr schlecht, 10 = sehr gut. Angst und Schmerzen: 0 = nicht vorhanden, 10 = maximal. Es handelt sich um eigene Aufzeichnungen, nicht um eine ärztliche Diagnose.'+(psy?' Sie sollen als Gesprächsgrundlage dienen.':'')+'</p>';
   if(!m.keys.length)return h+'<p><i>Im gewählten Zeitraum gibt es keine Einträge.</i></p>';
   h+='<h3>Zusammenfassung</h3><ul style="margin:4px 0;padding-left:18px"><li>Dokumentierte Tage: '+st.dayCount+' von '+st.cal+'</li><li>Durchschnitt Stimmung: '+fmt(st.avg.stimmung)+' · Angst: '+fmt(st.avg.angst)+' · Schmerzen: '+fmt(st.avg.schmerz)+'</li><li>Tage mit einer durchschnittlichen Stimmung von 4 oder schlechter: '+st.low+'</li><li>Tage mit Angst von 7 oder höher (mind. einmal am Tag): '+st.hiA+'</li><li>Tage mit Schmerzen von 7 oder höher (mind. einmal am Tag): '+st.hiS+'</li>'+(st.sleepN?'<li>Nächte mit schlechtem Schlaf: '+st.badSleep+' von '+st.sleepN+' dokumentierten</li>':'')+(st.ent.total?'<li>Erfasste Beeinträchtigungen im Alltag: '+st.ent.total+' (A: '+st.ent.A.n+', B: '+st.ent.B.n+', C: '+st.ent.C.n+', D: '+st.ent.D.n+')</li>':'')+'</ul>';
+  if(o.med)h+=medReportHTML(m.keys);
   h+='<h3>Durchschnitt nach Tageszeit</h3><table><tr><th></th><th class="n">Stimmung</th><th class="n">Angst</th><th class="n">Schmerzen</th></tr>'+SL.map(function(s){return '<tr><td>'+SLN[s]+'</td><td class="n">'+fmt(st.slot[s].stimmung)+'</td><td class="n">'+fmt(st.slot[s].angst)+'</td><td class="n">'+fmt(st.slot[s].schmerz)+'</td></tr>'}).join('')+'</table>';
   h+='<h3>Einzelne Tage</h3><p style="font-size:12px;margin:2px 0">Werte: morgens / mittags / abends</p><table><tr><th>Datum</th><th class="n">Stimmung</th><th class="n">Angst</th><th class="n">Schmerzen</th><th class="n">Schlaf</th></tr>'+m.keys.map(function(k){var d=state.days[k];return '<tr><td>'+dshort(k).slice(0,6)+dshort(k).slice(8)+'</td><td class="n">'+trio(d,'stimmung')+'</td><td class="n">'+trio(d,'angst')+'</td><td class="n">'+trio(d,'schmerz')+'</td><td class="n">'+esc(d.morgen&&d.morgen.schlaf||'–')+'</td></tr>'}).join('')+'</table>';
   var entRows=[];m.keys.forEach(function(k){(state.days[k].eintraege||[]).forEach(function(e){entRows.push({k:k,e:e})})});
@@ -498,6 +564,7 @@ function auswertungHTML(){
    '<label class="f">Aktenzeichen</label><input type="text" id="saz" value="'+esc(S.az||'')+'">'+
    '<div class="check"><input type="checkbox" id="o-nicht" '+(state.opt.nicht?'checked':'')+'><label for="o-nicht">„Was nicht gut lief“ aufnehmen</label></div>'+
    '<div class="check"><input type="checkbox" id="o-gut" '+(state.opt.gut?'checked':'')+'><label for="o-gut">„Was gut lief“ aufnehmen</label></div>'+
+   '<div class="check"><input type="checkbox" id="o-med" '+(state.opt.med?'checked':'')+'><label for="o-med">Medikation und Supplemente aufnehmen</label></div>'+
    '<div class="check"><input type="checkbox" id="o-notiz" '+(state.opt.notiz?'checked':'')+'><label for="o-notiz">Notizen und Sonstiges aufnehmen</label></div>'+
    '<div class="preview" id="preview">'+reportHTML(false)+'</div>'+
    '<div class="btns"><button class="ghost" data-act="copy">Bericht kopieren</button><button class="primary" data-act="pdf">Als PDF speichern oder drucken</button><button class="ghost" data-act="dlhtml" id="dlhtml">Als Datei speichern (HTML)</button><button class="ghost" data-act="dlcsv" id="dlcsv">Tabelle speichern (CSV für Excel)</button><button class="ghost" data-act="dlent">Beeinträchtigungen speichern (CSV wie Symptomtagebuch)</button></div><div class="msg" id="rmsg" role="status"></div><textarea id="fallback" style="display:none;margin-top:8px" readonly></textarea></div>';
@@ -540,6 +607,7 @@ function onData(){
   if(state.tab==='heute'){
     if(!dirty){loadDraft();var f=document.getElementById('form');if(f){f.innerHTML=formHTML();updateMood()}}
     refreshSlots();
+    var me=document.getElementById('meds');if(me&&!me.contains(document.activeElement))me.innerHTML=medsHTML();
     var en=document.getElementById('ents');if(en&&!en.contains(document.activeElement))en.innerHTML=entsHTML();
   }else renderView();
 }
@@ -568,8 +636,12 @@ document.addEventListener('click',function(ev){
   else if(a==='cancelent'){editIdx=null;entDraft={typ:entDraft.typ,int:null,text:'',hilfe:''};rerenderEnts()}
   else if(a==='rtab'){reflTab=v;var f3=document.getElementById('form');f3.innerHTML=formHTML();updateMood()}
   else if(a==='smiley'){draft.stimmung=+v;dirty=true;var f4=document.getElementById('form');f4.innerHTML=formHTML();updateMood()}
-  else if(a==='profile'){state.profile=v;state.opt=v==='psy'?{nicht:true,gut:true,notiz:true}:{nicht:true,gut:true,notiz:false};renderView()}
+  else if(a==='profile'){state.profile=v;state.opt=v==='psy'?{nicht:true,gut:true,notiz:true,med:true}:{nicht:true,gut:true,notiz:false,med:false};renderView()}
   else if(a==='pdf'){openPdf()}
+  else if(a==='addbedarf'){addBedarf()}
+  else if(a==='delbedarf'){delBedarf(+v)}
+  else if(a==='addmed'){state.meds.push({id:'m'+Date.now(),name:'',dose:'',slot:'morgen',kind:'med'});store.saveSettings();renderView()}
+  else if(a==='delmed'){if(confirm('Dieses Präparat aus der Liste entfernen? Frühere Tage bleiben unverändert.')){state.meds=state.meds.filter(function(x){return x.id!==v});store.saveSettings();renderView()}}
   else if(a==='login'){doLogin()}
   else if(a==='logout'){doLogout()}
   else if(a==='dlent'){download('Beeintraechtigungen_'+todayStr()+'.csv',entCSV())}
@@ -578,6 +650,8 @@ document.addEventListener('click',function(ev){
 document.addEventListener('input',function(ev){
   var t=ev.target,f=t.getAttribute&&t.getAttribute('data-field');
   var fe=t.getAttribute&&t.getAttribute('data-ent');
+  var mf=t.getAttribute&&t.getAttribute('data-mf');
+  if(mf){var q2=mf.split('.');var mm=state.meds.filter(function(x){return x.id===q2[0]})[0];if(mm)mm[q2[1]]=t.value;return}
   var fr=t.getAttribute&&t.getAttribute('data-refl');
   if(fr){var pr=fr.split('.');draft.refl=draft.refl||{};draft.refl[pr[0]]=draft.refl[pr[0]]||{};draft.refl[pr[0]][pr[1]]=t.value;dirty=true;return}
   if(fe){if(fe==='int'){entDraft.int=+t.value;t.classList.remove('unset');var ve=document.getElementById('val-ent');if(ve)ve.textContent=t.value}else entDraft[fe]=t.value;return}
@@ -596,6 +670,9 @@ document.addEventListener('change',function(ev){
   else if(t.id==='o-nicht'){state.opt.nicht=t.checked;refreshPreview()}
   else if(t.id==='o-gut'){state.opt.gut=t.checked;refreshPreview()}
   else if(t.id==='o-notiz'){state.opt.notiz=t.checked;refreshPreview()}
+  else if(t.id==='o-med'){state.opt.med=t.checked;refreshPreview()}
+  else if(t.getAttribute&&t.getAttribute('data-med')){toggleMed(t.getAttribute('data-med'),t.checked)}
+  else if(t.getAttribute&&t.getAttribute('data-mf')){store.saveSettings().then(function(){var x=document.getElementById('mgmsg');if(x)x.textContent='Gespeichert ✓'}).catch(function(){var x=document.getElementById('mgmsg');if(x)x.textContent='Speichern hat nicht geklappt.'})}
   else if(t.id==='rfrom'){state.from=t.value;renderView()}
   else if(t.id==='rto'){state.to=t.value;renderView()}
 });
