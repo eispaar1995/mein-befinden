@@ -110,7 +110,7 @@ var store={saveDay:null,saveSettings:null};
 var TYPES={A:'Antrieb & Vitalität',B:'Kognitive Funktionen',C:'Soziale Interaktion',D:'Emotionale Regulation'};
 var TYPEHINT={A:'Morgentief, Entscheidungsunfähigkeit, Körperpflege/Haushalt',B:'Konzentration, Merkfähigkeit, Gedankenschleifen',C:'Rückzug, Angst vor Menschenmengen, Konflikte, Isolation',D:'Panikattacken, Weinerlichkeit, Reizbarkeit, Gefühllosigkeit'};
 var entDraft={typ:'A',int:null,text:'',hilfe:''};var editIdx=null;
-var SM=[['😊','Gut',8],['😐','Gleichgültig',5],['🌧️','Regen',3],['⛈️','Gewitter',1]];
+var SM=[['😊','Gut',8],['😐','Gleichgültig',5],['🌧️','Niedergeschlagen',3],['⛈️','Überfordert',1]];
 function smBand(v){return v>=7?0:(v>=5?1:(v>=3?2:3))}
 function smRow(v){return SM.map(function(m,i){return '<button data-act="smiley" data-v="'+m[2]+'" aria-pressed="'+(v!=null&&smBand(v)===i)+'" aria-label="'+m[1]+'"><span class="sme">'+m[0]+'</span>'+m[1]+'</button>'}).join('')}
 var RB=[['schule','🎓 Schule'],['arbeit','💼 Arbeit'],['fahren','🚆 Fahren'],['stress','⚡ Stress']];
