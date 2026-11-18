@@ -358,6 +358,38 @@ function verlaufList(){
   return h+'</div>';
 }
 
+/* ---------- Wochennote (1-6 wie im Schulsystem) ---------- */
+var GN={1:'sehr gut',2:'gut',3:'befriedigend',4:'ausreichend',5:'mangelhaft',6:'ungenügend'};
+function monday(s){var d=pdate(s),w=(d.getDay()+6)%7;d.setDate(d.getDate()-w);return dstr(d)}
+function toGrade(score){return Math.max(1,Math.min(6,6-score/2))}
+function gfmt(g){return g.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1})}
+function gword(g){return GN[Math.max(1,Math.min(6,Math.round(g)))]}
+function gcol(g){return moodColor(Math.max(0,Math.min(10,(6-g)*2)))}
+function weekGrades(){
+  var wk={};
+  Object.keys(state.days).forEach(function(k){var m=monday(k);(wk[m]=wk[m]||[]).push(k)});
+  return Object.keys(wk).sort().reverse().map(function(m){
+    var a={stimmung:[],angst:[],schmerz:[]},n=0;
+    wk[m].forEach(function(k){var d=state.days[k],has=false;SL.forEach(function(s){['stimmung','angst','schmerz'].forEach(function(f){var v=d[s]&&d[s][f];if(isNum(v)){a[f].push(v);has=true}})});if(has)n++});
+    if(!a.stimmung.length)return null;
+    var st=avg(a.stimmung),an=a.angst.length?avg(a.angst):null,sc=a.schmerz.length?avg(a.schmerz):null;
+    var parts=[st];if(an!=null)parts.push(10-an);if(sc!=null)parts.push(10-sc);
+    var score=avg(parts);
+    return {mon:m,sun:addDays(m,6),days:n,gStim:toGrade(st),gAngst:an==null?null:toGrade(10-an),gSchm:sc==null?null:toGrade(10-sc),grade:toGrade(score)};
+  }).filter(Boolean);
+}
+function wochenHTML(){
+  var w=weekGrades().slice(0,8);
+  if(!w.length)return '';
+  var cur=monday(todayStr());
+  var h='<div class="card"><h2>Wochennote</h2>';
+  var top=w[0];
+  h+='<div style="text-align:center;margin:6px 0 10px"><div style="font-size:13px;color:var(--ink2)">'+(top.mon===cur?'Diese Woche':'Letzte Woche')+' ('+dshort(top.mon).slice(0,6)+' – '+dshort(top.sun).slice(0,6)+')</div><div style="font-size:44px;font-weight:700;line-height:1.1;color:'+gcol(top.grade)+'">'+gfmt(top.grade)+'</div><div style="font-weight:600">'+gword(top.grade)+'</div><div class="hint">'+top.days+' von 7 Tagen dokumentiert</div></div>';
+  h+='<table><tr><th>Woche</th><th class="n">Stimmung</th><th class="n">Angst</th><th class="n">Schmerz</th><th class="n">Gesamt</th></tr>'+w.map(function(x){return '<tr><td>'+dshort(x.mon).slice(0,6)+'<br><span class="hint">'+x.days+' Tage</span></td><td class="n">'+gfmt(x.gStim)+'</td><td class="n">'+(x.gAngst==null?'–':gfmt(x.gAngst))+'</td><td class="n">'+(x.gSchm==null?'–':gfmt(x.gSchm))+'</td><td class="n"><b style="color:'+gcol(x.grade)+'">'+gfmt(x.grade)+'</b></td></tr>'}).join('')+'</table>';
+  h+='<p class="hint" style="margin:8px 0 0">So wird gerechnet: Aus Stimmung, Angst (umgekehrt) und Schmerz (umgekehrt) wird ein Wert von 0 bis 10 gebildet und auf Schulnoten umgerechnet: 10 entspricht 1, 0 entspricht 6. Die Note beschreibt, wie belastend die Woche war, nicht dich als Person. Wochen mit wenigen Tagen sind weniger aussagekräftig.</p></div>';
+  return h;
+}
+
 /* ---------- Auswertung ---------- */
 function chartHTML(keys,r){
   if(keys.length<2)return '<p class="hint">Für den Verlauf werden mindestens zwei dokumentierte Tage benötigt.</p>';
@@ -456,7 +488,7 @@ function reportCSV(){
 function auswertungHTML(){
   var r=range(),keys=daysIn(r),st=stats(keys,r),S=state.settings;
   var presets=[['7','7 Tage'],['14','14 Tage'],['30','30 Tage'],['90','90 Tage'],['alle','Alles'],['eigen','Zeitraum']];
-  var h='<div class="card"><h2>Bericht für</h2><div class="chips"><button data-act="profile" data-v="gdb" aria-pressed="'+(state.profile==='gdb')+'">Sozialamt / GdB</button><button data-act="profile" data-v="psy" aria-pressed="'+(state.profile==='psy')+'">Neurologin</button></div><p class="hint" style="margin:8px 0 0">'+(state.profile==='psy'?'Mit allen Reflexionen und Notizen, ohne Aktenzeichen und Unterschriftszeile.':'Sachlich, mit Aktenzeichen, Funktionsbeeinträchtigungen und Unterschriftszeile.')+'</p></div><div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
+  var h=wochenHTML()+'<div class="card"><h2>Bericht für</h2><div class="chips"><button data-act="profile" data-v="gdb" aria-pressed="'+(state.profile==='gdb')+'">Sozialamt / GdB</button><button data-act="profile" data-v="psy" aria-pressed="'+(state.profile==='psy')+'">Neurologin</button></div><p class="hint" style="margin:8px 0 0">'+(state.profile==='psy'?'Mit allen Reflexionen und Notizen, ohne Aktenzeichen und Unterschriftszeile.':'Sachlich, mit Aktenzeichen, Funktionsbeeinträchtigungen und Unterschriftszeile.')+'</p></div><div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
   if(state.range==='eigen')h+='<div class="row" style="margin-top:10px"><input type="date" id="rfrom" value="'+r.from+'" aria-label="Von"><input type="date" id="rto" value="'+r.to+'" aria-label="Bis"></div>';
   h+='<p class="hint" style="margin:8px 0 0">'+dshort(r.from)+' – '+dshort(r.to)+'</p></div>';
   if(!keys.length)return h+'<div class="card">Im gewählten Zeitraum gibt es noch keine Einträge.</div>';
