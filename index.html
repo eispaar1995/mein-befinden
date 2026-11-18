@@ -407,7 +407,7 @@ function trio(d,f){return SL.map(function(s){var v=d[s]&&d[s][f];return isNum(v)
 function reportHTML(full){
   var m=reportModel(),r=m.r,st=m.st,o=state.opt,S=state.settings;
   var h='';
-  var psy=state.profile==='psy',ttl=psy?'Verlaufsbericht – Selbstbeobachtung für die Therapie':'Befindlichkeitsprotokoll – Selbstbeobachtung';
+  var psy=state.profile==='psy',ttl=psy?'Verlaufsbericht – Selbstbeobachtung für die Neurologin':'Befindlichkeitsprotokoll – Selbstbeobachtung';
   if(full)h+='<h1 style="font-size:20px">'+ttl+'</h1>';
   else h+='<h3>'+ttl+'</h3>';
   h+='<p>'+(S.name?'<b>Name:</b> '+esc(S.name)+'<br>':'')+(S.az&&!psy?'<b>Aktenzeichen:</b> '+esc(S.az)+'<br>':'')+'<b>Zeitraum:</b> '+dshort(r.from)+' – '+dshort(r.to)+'<br><b>Erstellt am:</b> '+dshort(todayStr())+'</p>';
@@ -456,7 +456,7 @@ function reportCSV(){
 function auswertungHTML(){
   var r=range(),keys=daysIn(r),st=stats(keys,r),S=state.settings;
   var presets=[['7','7 Tage'],['14','14 Tage'],['30','30 Tage'],['90','90 Tage'],['alle','Alles'],['eigen','Zeitraum']];
-  var h='<div class="card"><h2>Bericht für</h2><div class="chips"><button data-act="profile" data-v="gdb" aria-pressed="'+(state.profile==='gdb')+'">Sozialamt / GdB</button><button data-act="profile" data-v="psy" aria-pressed="'+(state.profile==='psy')+'">Psychologin</button></div><p class="hint" style="margin:8px 0 0">'+(state.profile==='psy'?'Mit allen Reflexionen und Notizen, ohne Aktenzeichen und Unterschriftszeile.':'Sachlich, mit Aktenzeichen, Funktionsbeeinträchtigungen und Unterschriftszeile.')+'</p></div><div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
+  var h='<div class="card"><h2>Bericht für</h2><div class="chips"><button data-act="profile" data-v="gdb" aria-pressed="'+(state.profile==='gdb')+'">Sozialamt / GdB</button><button data-act="profile" data-v="psy" aria-pressed="'+(state.profile==='psy')+'">Neurologin</button></div><p class="hint" style="margin:8px 0 0">'+(state.profile==='psy'?'Mit allen Reflexionen und Notizen, ohne Aktenzeichen und Unterschriftszeile.':'Sachlich, mit Aktenzeichen, Funktionsbeeinträchtigungen und Unterschriftszeile.')+'</p></div><div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
   if(state.range==='eigen')h+='<div class="row" style="margin-top:10px"><input type="date" id="rfrom" value="'+r.from+'" aria-label="Von"><input type="date" id="rto" value="'+r.to+'" aria-label="Bis"></div>';
   h+='<p class="hint" style="margin:8px 0 0">'+dshort(r.from)+' – '+dshort(r.to)+'</p></div>';
   if(!keys.length)return h+'<div class="card">Im gewählten Zeitraum gibt es noch keine Einträge.</div>';
