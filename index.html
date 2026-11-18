@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#256abf">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mein Befinden</title>
+<style>
+:root{color-scheme:light;--bg:#f6f5f2;--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#6f6d67;--line:#e4e2dc;--btn:#256abf;--btn-ink:#fff;--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--soft:#eef4fc;--warn:#fff4e5;--warn-line:#f0d3a6}
+@media (prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#121211;--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#a09e95;--line:#33322f;--btn:#3987e5;--btn-ink:#0b0b0b;--s1:#3987e5;--s2:#d95926;--s3:#199e70;--soft:#1b2430;--warn:#2a2218;--warn-line:#5a4526}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+header{padding:16px 16px 4px}
+h1{font-size:22px;margin:0}
+#status{font-size:12px;color:var(--muted);margin-top:2px}
+#tabs{display:flex;gap:6px;padding:8px 12px;position:sticky;top:0;background:var(--bg);z-index:5}
+#tabs button{flex:1;padding:10px 4px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font:inherit;font-size:15px}
+#tabs button[aria-selected=true]{background:var(--btn);color:var(--btn-ink);border-color:var(--btn);font-weight:600}
+main{padding:4px 12px 40px;max-width:640px;margin:0 auto}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0}
+.row{display:flex;gap:8px;align-items:center}
+.row.sb{justify-content:space-between}
+.ghost{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;font:inherit;min-height:44px}
+.primary{border:0;background:var(--btn);color:var(--btn-ink);border-radius:12px;padding:13px 18px;font:inherit;font-weight:600;min-height:48px;width:100%}
+.datebar{display:flex;align-items:center;gap:8px}
+.datebar .d{flex:1;text-align:center;font-weight:600}
+.slots{display:flex;gap:6px;margin:8px 0}
+.slots button{flex:1;padding:10px 2px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;font:inherit;font-size:14px;min-height:56px}
+.slots button[aria-selected=true]{border:2px solid var(--btn);background:var(--soft);font-weight:600}
+.slots .ok{color:var(--s3);font-weight:700}
+label.f{display:block;font-weight:600;margin:14px 0 4px}
+.hint{font-size:13px;color:var(--muted);font-weight:400}
+.gauge{display:block;margin:0 auto;max-width:300px;width:100%}
+.big{text-align:center;font-size:20px;font-weight:700;margin:2px 0 6px}
+.big small{font-weight:400;color:var(--ink2);font-size:15px}
+input[type=range]{width:100%;height:36px;accent-color:var(--btn)}
+input[type=range].unset{opacity:.45}
+.val{font-weight:600;min-width:7ch;text-align:right}
+textarea,input[type=text],input[type=date]{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+textarea{min-height:92px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{padding:9px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;font:inherit;min-height:42px}
+.chips button[aria-pressed=true]{background:var(--btn);color:var(--btn-ink);border-color:var(--btn)}
+.note{background:var(--warn);border:1px solid var(--warn-line);border-radius:12px;padding:10px 12px;font-size:14px;margin:10px 0}
+.msg{font-size:14px;margin-top:8px;min-height:20px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kpi{background:var(--bg);border-radius:12px;padding:10px}
+.kpi b{display:block;font-size:22px}
+.kpi span{font-size:13px;color:var(--ink2)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--ink2);font-weight:600}
+td.n,th.n{text-align:center;white-space:nowrap}
+.dots{display:inline-flex;gap:3px;vertical-align:middle}
+.dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted);display:inline-block}
+.list button.item{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);padding:12px 4px;font:inherit}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink2);margin:4px 0}
+.legend i{display:inline-block;width:18px;height:0;border-top:3px solid;vertical-align:middle;margin-right:5px}
+.chartwrap{position:relative}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);display:none;white-space:nowrap}
+.check{display:flex;gap:10px;align-items:center;margin:8px 0}
+.check input{width:22px;height:22px}
+.preview{font-size:13px;max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--bg)}
+.preview h3{margin:10px 0 4px;font-size:14px}
+.preview p{margin:4px 0}
+.btns{display:grid;gap:8px;margin-top:10px}
+h2{font-size:17px;margin:0 0 6px}
+.entry{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--bg)}
+</style>
+</head>
+<body>
+<header><div class="row sb"><h1>Mein Befinden</h1><button class="ghost" data-act="logout" style="min-height:36px;padding:4px 10px;font-size:13px">Abmelden</button></div><div id="status">Verbinde …</div></header>
+<nav id="tabs" role="tablist" style="display:none">
+  <button role="tab" data-act="tab" data-v="heute">Heute</button>
+  <button role="tab" data-act="tab" data-v="verlauf">Verlauf</button>
+  <button role="tab" data-act="tab" data-v="auswertung">Auswertung</button>
+</nav>
+<main id="view"></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script>
+(function(){
+'use strict';
+var SL=['morgen','mittag','abend'];
+var SLN={morgen:'Morgens',mittag:'Mittags',abend:'Abends'};
+var SLI={morgen:'☀️',mittag:'🌤️',abend:'🌙'};
+var WORDS=['sehr schlecht','sehr schlecht','schlecht','schlecht','belastet','mittel','okay','ganz gut','gut','sehr gut','sehr gut'];
+var LS_KEY='befinden_v1';
+
+function pad(n){return (n<10?'0':'')+n}
+function dstr(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function pdate(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2])}
+function addDays(s,n){var d=pdate(s);d.setDate(d.getDate()+n);return dstr(d)}
+function todayStr(){return dstr(new Date())}
+function dshort(s){var p=s.split('-');return p[2]+'.'+p[1]+'.'+p[0]}
+function dlong(s){return pdate(s).toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})}
+function autoSlot(){var h=new Date().getHours();return h<11?'morgen':(h<17?'mittag':'abend')}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function fmt(v,d){if(v==null)return '–';d=d==null?1:d;return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d})}
+function isNum(v){return typeof v==='number'&&isFinite(v)}
+
+var state={days:{},settings:{name:'Marie Janzen',az:'42S0616478'},date:todayStr(),slot:autoSlot(),tab:'heute',range:'30',from:'',to:'',opt:{nicht:true,gut:true,notiz:false},mode:'local'};
+var draft={},dirty=false,msgText='';
+var store={saveDay:null,saveSettings:null};
+var TYPES={A:'Antrieb & Vitalität',B:'Kognitive Funktionen',C:'Soziale Interaktion',D:'Emotionale Regulation'};
+var TYPEHINT={A:'Morgentief, Entscheidungsunfähigkeit, Körperpflege/Haushalt',B:'Konzentration, Merkfähigkeit, Gedankenschleifen',C:'Rückzug, Angst vor Menschenmengen, Konflikte, Isolation',D:'Panikattacken, Weinerlichkeit, Reizbarkeit, Gefühllosigkeit'};
+var entDraft={typ:'A',int:null,text:'',hilfe:''};var editIdx=null;
+
+/* ---------- Speicher (Supabase) ---------- */
+var CFG=window.BEFINDEN_CONFIG||{};
+var sb=null,uid=null;
+function localLoad(){try{var j=JSON.parse(localStorage.getItem(LS_KEY)||'null');if(j){state.days=j.days||{};if(j.settings)state.settings=Object.assign(state.settings,j.settings)}}catch(e){}}
+function localSave(){try{localStorage.setItem(LS_KEY,JSON.stringify({days:state.days,settings:state.settings}))}catch(e){}}
+var q=Promise.resolve();
+function enqueue(fn){var p=q.then(fn);q=p.catch(function(){});return p}
+store.saveDay=function(date,obj){
+  state.days[date]=obj;
+  if(state.mode==='demo'){return Promise.resolve()}
+  localSave(); // Sicherheitskopie auf dem Gerät
+  return enqueue(function(){return sb.from('days').upsert({user_id:uid,date:date,data:obj},{onConflict:'user_id,date'}).then(function(r){if(r.error)throw r.error})});
+};
+store.saveSettings=function(){
+  if(state.mode==='demo')return Promise.resolve();
+  localSave();
+  return enqueue(function(){return sb.from('settings').upsert({user_id:uid,name:state.settings.name||'',az:state.settings.az||''},{onConflict:'user_id'}).then(function(r){if(r.error)throw r.error})});
+};
+function setStatus(t){var e=document.getElementById('status');if(e)e.textContent=t}
+function loginHTML(msg){
+  return '<div class="card"><h2>Anmelden</h2><p class="hint" style="margin-top:0">Deine Daten liegen privat in deiner eigenen Datenbank. Nur du kommst mit deinem Login heran.</p><label class="f">E-Mail</label><input type="email" id="lmail" autocomplete="username" style="width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)"><label class="f">Passwort</label><input type="password" id="lpw" autocomplete="current-password" style="width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)"><div style="margin-top:14px"><button class="primary" data-act="login">Anmelden</button></div><div class="msg" id="lmsg" role="status">'+esc(msg||'')+'</div></div>';
+}
+async function loadAll(){
+  var r=await sb.from('days').select('date,data').order('date');
+  if(r.error)throw r.error;
+  var m={};r.data.forEach(function(x){m[x.date]=x.data});state.days=m;
+  var s2=await sb.from('settings').select('name,az').maybeSingle();
+  if(s2.data)state.settings=Object.assign(state.settings,{name:s2.data.name||state.settings.name,az:s2.data.az||state.settings.az});
+  localSave();
+}
+async function startSession(session){
+  uid=session.user.id;state.mode='db';
+  document.getElementById('tabs').style.display='';
+  setStatus('Lade …');
+  try{await loadAll();setStatus('Angemeldet · gespeichert in deiner privaten Datenbank (EU).');}
+  catch(e){localLoad();setStatus('Datenbank gerade nicht erreichbar – zeige die Kopie auf diesem Gerät.')}
+  loadDraft();renderView();
+}
+async function doLogin(){
+  var m=document.getElementById('lmsg'),em=document.getElementById('lmail').value.trim(),pw=document.getElementById('lpw').value;
+  if(!em||!pw){m.textContent='Bitte E-Mail und Passwort eingeben.';return}
+  m.textContent='Melde an …';
+  var r=await sb.auth.signInWithPassword({email:em,password:pw});
+  if(r.error){m.textContent='Anmeldung nicht möglich: '+(r.error.message==='Invalid login credentials'?'E-Mail oder Passwort stimmt nicht.':r.error.message);return}
+  startSession(r.data.session);
+}
+async function doLogout(){await sb.auth.signOut();try{localStorage.removeItem(LS_KEY)}catch(e){}state.days={};uid=null;showLogin()}
+function showLogin(msg){document.getElementById('tabs').style.display='none';document.getElementById('view').innerHTML=loginHTML(msg);setStatus('Nicht angemeldet')}
+async function connect(){
+  if(CFG.demo){state.mode='demo';state.days=CFG.demoDays||{};setStatus('Vorschau mit Beispieldaten – nichts wird gespeichert.');document.getElementById('tabs').style.display='';loadDraft();renderView();return}
+  if(!window.supabase){showLogin('Die Verbindung konnte nicht geladen werden. Bitte Internet prüfen und neu laden.');return}
+  sb=window.supabase.createClient(CFG.url,CFG.key,{auth:{persistSession:true,autoRefreshToken:true}});
+  var r=await sb.auth.getSession();
+  if(r.data&&r.data.session)startSession(r.data.session);else showLogin();
+}
+
+/* ---------- Auswertungs-Helfer ---------- */
+function vals(day,f){return SL.map(function(s){return day&&day[s]?day[s][f]:undefined}).filter(isNum)}
+function avg(a){return a.length?a.reduce(function(x,y){return x+y},0)/a.length:null}
+function dayAvg(day,f){return avg(vals(day,f))}
+function dayMax(day,f){var v=vals(day,f);return v.length?Math.max.apply(null,v):null}
+function range(){
+  var t=todayStr(),from,to=t;
+  if(state.range==='alle'){var ks=Object.keys(state.days).sort();from=ks.length?ks[0]:t}
+  else if(state.range==='eigen'){from=state.from||addDays(t,-29);to=state.to||t;if(from>to){var x=from;from=to;to=x}}
+  else{from=addDays(t,-(+state.range-1))}
+  return {from:from,to:to};
+}
+function nCal(r){return Math.round((pdate(r.to)-pdate(r.from))/864e5)+1}
+function daysIn(r){return Object.keys(state.days).filter(function(k){return k>=r.from&&k<=r.to}).sort()}
+function moodColor(v){
+  function hx(h){return [parseInt(h.substr(1,2),16),parseInt(h.substr(3,2),16),parseInt(h.substr(5,2),16)]}
+  function mix(a,b,t){var A=hx(a),B=hx(b);return 'rgb('+A.map(function(c,i){return Math.round(c+(B[i]-c)*t)}).join(',')+')'}
+  return v<5?mix('#d95926','#cfcdc6',v/5):mix('#cfcdc6','#2a78d6',(v-5)/5);
+}
+function stats(keys,r){
+  var out={dayCount:keys.length,cal:nCal(r)};
+  var all={stimmung:[],angst:[],schmerz:[]},bySlot={};
+  SL.forEach(function(s){bySlot[s]={stimmung:[],angst:[],schmerz:[]}});
+  var low=0,hiA=0,hiS=0,badSleep=0,sleepN=0;
+  keys.forEach(function(k){var d=state.days[k];
+    ['stimmung','angst','schmerz'].forEach(function(f){SL.forEach(function(s){var v=d[s]&&d[s][f];if(isNum(v)){all[f].push(v);bySlot[s][f].push(v)}})});
+    var ma=dayAvg(d,'stimmung');if(ma!=null&&ma<=4)low++;
+    var xa=dayMax(d,'angst');if(xa!=null&&xa>=7)hiA++;
+    var xs=dayMax(d,'schmerz');if(xs!=null&&xs>=7)hiS++;
+    if(d.morgen&&d.morgen.schlaf){sleepN++;if(d.morgen.schlaf==='schlecht')badSleep++}
+  });
+  out.avg={stimmung:avg(all.stimmung),angst:avg(all.angst),schmerz:avg(all.schmerz)};
+  out.slot={};SL.forEach(function(s){out.slot[s]={stimmung:avg(bySlot[s].stimmung),angst:avg(bySlot[s].angst),schmerz:avg(bySlot[s].schmerz),n:bySlot[s].stimmung.length}});
+  var ent={total:0};Object.keys(TYPES).forEach(function(t){ent[t]={n:0,sum:0}});
+  keys.forEach(function(k){(state.days[k].eintraege||[]).forEach(function(e){if(ent[e.typ]&&isNum(e.int)){ent[e.typ].n++;ent[e.typ].sum+=e.int;ent.total++}})});
+  out.ent=ent;
+  out.low=low;out.hiA=hiA;out.hiS=hiS;out.badSleep=badSleep;out.sleepN=sleepN;
+  return out;
+}
+
+/* ---------- Gauge ---------- */
+function polar(r,deg){var a=deg*Math.PI/180;return [120+r*Math.cos(a),120-r*Math.sin(a)]}
+function gaugeSVG(v){
+  var seg=180/11,p='';
+  for(var i=0;i<=10;i++){
+    var a0=180-i*seg-0.8,a1=180-(i+1)*seg+0.8;
+    var P0=polar(100,a0),P1=polar(100,a1);
+    var active=(v===i);
+    p+='<path d="M'+P0[0].toFixed(1)+' '+P0[1].toFixed(1)+' A100 100 0 0 1 '+P1[0].toFixed(1)+' '+P1[1].toFixed(1)+'" fill="none" stroke="'+moodColor(i)+'" stroke-width="'+(active?30:20)+'" stroke-linecap="butt" opacity="'+(v==null||active?(v==null?0.55:1):0.35)+'"/>';
+  }
+  var needle='';
+  if(v!=null){var th=180-(v+0.5)*seg,e=polar(80,th);needle='<line x1="120" y1="120" x2="'+e[0].toFixed(1)+'" y2="'+e[1].toFixed(1)+'" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><circle cx="120" cy="120" r="8" fill="currentColor"/>'}
+  else needle='<circle cx="120" cy="120" r="8" fill="currentColor" opacity=".35"/>';
+  return '<svg class="gauge" viewBox="0 0 240 134" role="img" aria-label="Stimmungsbarometer"><text x="12" y="132" font-size="11" fill="currentColor" opacity=".75">sehr schlecht</text><text x="228" y="132" font-size="11" text-anchor="end" fill="currentColor" opacity=".75">sehr gut</text>'+p+needle+'</svg>';
+}
+function moodLabel(v){return v==null?'<small>Bitte einstellen</small>':v+' <small>· '+WORDS[v]+'</small>'}
+
+/* ---------- Heute ---------- */
+function loadDraft(){var d=state.days[state.date];draft=Object.assign({},d&&d[state.slot]||{});dirty=false;msgText=''}
+function slider(field,title,hint){
+  var v=draft[field],set=isNum(v);
+  return '<label class="f">'+title+' <span class="hint">'+hint+'</span></label><div class="row"><input type="range" min="0" max="10" step="1" data-field="'+field+'" value="'+(set?v:5)+'" class="'+(set?'':'unset')+'" aria-label="'+title+'"><span class="val" id="val-'+field+'">'+(set?v:'–')+'</span><button class="ghost" data-act="clear" data-v="'+field+'" aria-label="'+title+' zurücksetzen" style="min-height:36px;padding:4px 10px">×</button></div>';
+}
+function formHTML(){
+  var s=state.slot,h='';
+  h+='<label class="f" style="margin-top:4px">Wie ist deine Stimmung gerade?</label>';
+  h+='<div id="gaugebox">'+gaugeSVG(isNum(draft.stimmung)?draft.stimmung:null)+'</div><div class="big" id="moodlabel">'+moodLabel(isNum(draft.stimmung)?draft.stimmung:null)+'</div>';
+  h+='<div class="row"><input type="range" min="0" max="10" step="1" data-field="stimmung" value="'+(isNum(draft.stimmung)?draft.stimmung:5)+'" class="'+(isNum(draft.stimmung)?'':'unset')+'" aria-label="Stimmung 0 bis 10"></div>';
+  h+='<div id="crisis"></div>';
+  h+=slider('angst','Angst / innere Anspannung','0 = keine, 10 = maximal');
+  h+=slider('schmerz','Schmerzen','0 = keine, 10 = maximal');
+  if(s==='morgen'){
+    h+='<label class="f">Wie hast du geschlafen?</label><div class="chips">'+['gut','mittel','schlecht'].map(function(o){return '<button data-act="sleep" data-v="'+o+'" aria-pressed="'+(draft.schlaf===o)+'">'+o[0].toUpperCase()+o.slice(1)+'</button>'}).join('')+'</div>';
+  }
+  if(s==='abend'){
+    h+='<div class="card" style="background:var(--soft);margin-top:16px"><h2>Abendreflexion</h2>';
+    h+='<label class="f" style="margin-top:6px">Was lief heute gut?</label><textarea data-field="gut" placeholder="z. B. kleine Erfolge, schöne Momente, was dir geholfen hat">'+esc(draft.gut||'')+'</textarea>';
+    h+='<label class="f">Was lief heute nicht gut?</label><textarea data-field="schlecht" placeholder="z. B. Angstzustände, Schmerzen, was dich belastet oder eingeschränkt hat">'+esc(draft.schlecht||'')+'</textarea>';
+    h+='<label class="f">Sonstiges <span class="hint">(privat, z. B. Medikamente, Stress)</span></label><textarea data-field="notiz" style="min-height:64px">'+esc(draft.notiz||'')+'</textarea></div>';
+  }else{
+    h+='<label class="f">Kurze Notiz <span class="hint">(optional)</span></label><textarea data-field="notiz" style="min-height:64px" placeholder="z. B. Panik am Vormittag, Kopfschmerzen">'+esc(draft.notiz||'')+'</textarea>';
+  }
+  h+='<div style="margin-top:14px"><button class="primary" data-act="save">Speichern</button></div><div class="msg" id="msg" role="status">'+esc(msgText)+'</div>';
+  return h;
+}
+function slotsHTML(){
+  var d=state.days[state.date]||{};
+  return SL.map(function(s){var ok=d[s]&&(isNum(d[s].stimmung)||isNum(d[s].angst)||isNum(d[s].schmerz));
+    return '<button role="tab" data-act="slot" data-v="'+s+'" aria-selected="'+(state.slot===s)+'">'+SLI[s]+'<br>'+SLN[s]+(ok?' <span class="ok">✓</span>':'')+'</button>'}).join('');
+}
+function nudgeHTML(){
+  var d=state.days[state.date]||{};
+  if(state.date===todayStr()&&new Date().getHours()>=18&&!(d.abend&&(d.abend.schlecht||d.abend.gut||isNum(d.abend.stimmung))))
+    return '<div class="note">🌙 <b>Abendreflexion:</b> Was ist heute gut gelaufen – und was nicht? Trag es unter „Abends“ ein.</div>';
+  return '';
+}
+function heuteHTML(){
+  var isToday=state.date===todayStr();
+  return '<div class="card"><div class="datebar"><button class="ghost" data-act="prev" aria-label="Vorheriger Tag">‹</button><div class="d" id="dlabel">'+esc(dlong(state.date))+'</div><button class="ghost" data-act="next" aria-label="Nächster Tag" '+(isToday?'disabled':'')+'>›</button></div>'+(isToday?'':'<div style="text-align:center;margin-top:6px"><button class="ghost" data-act="today">Zu heute</button></div>')+'</div><div id="nudge">'+nudgeHTML()+'</div><div class="slots" id="slots" role="tablist">'+slotsHTML()+'</div><div class="card" id="form">'+formHTML()+'</div><div class="card" id="ents">'+entsHTML()+'</div>';
+}
+function updateMood(){
+  var v=isNum(draft.stimmung)?draft.stimmung:null;
+  document.getElementById('gaugebox').innerHTML=gaugeSVG(v);
+  document.getElementById('moodlabel').innerHTML=moodLabel(v);
+  document.getElementById('crisis').innerHTML=(v!=null&&v<=2)?'<div class="note">Wenn es gerade sehr schwer ist: Die Telefonseelsorge ist kostenlos und rund um die Uhr erreichbar (0800 111 0 111). Der ärztliche Bereitschaftsdienst hat die 116 117, im Notfall die 112.</div>':'';
+}
+function doSave(){
+  if(!isNum(draft.stimmung)){setMsg('Bitte zuerst die Stimmung einstellen.');return}
+  var rec={};Object.keys(draft).forEach(function(k){var v=draft[k];if(v!==null&&v!==undefined&&v!==''&&!(typeof v==='number'&&!isFinite(v)))rec[k]=v});
+  rec.ts=new Date().toISOString();
+  var day=Object.assign({},state.days[state.date]||{});
+  day.date=state.date;day[state.slot]=rec;
+  setMsg('Speichere …');
+  store.saveDay(state.date,day).then(function(){dirty=false;setMsg('Gespeichert ✓ ('+new Date().toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr)');refreshSlots()}).catch(function(){setMsg('Speichern hat nicht geklappt. Bitte noch einmal versuchen.')});
+}
+function setMsg(t){msgText=t;var m=document.getElementById('msg');if(m)m.textContent=t}
+function refreshSlots(){var s=document.getElementById('slots');if(s)s.innerHTML=slotsHTML();var n=document.getElementById('nudge');if(n)n.innerHTML=nudgeHTML()}
+
+/* ---------- Beeinträchtigungen ---------- */
+function entsHTML(){
+  var d=state.days[state.date]||{},list=d.eintraege||[];
+  var h='<h2>Beeinträchtigungen im Alltag</h2><p class="hint" style="margin-top:0">Wobei warst du heute eingeschränkt oder brauchtest Hilfe? Das ist die Grundlage deiner Eigenschilderung.</p>';
+  list.forEach(function(e,i){
+    h+='<div class="entry"><div class="row sb"><b>'+esc(e.typ)+' · '+esc(TYPES[e.typ]||'')+' · '+esc(e.int)+'/10</b><span><button class="ghost" data-act="editent" data-v="'+i+'" style="min-height:36px;padding:4px 10px">Bearbeiten</button> <button class="ghost" data-act="delent" data-v="'+i+'" style="min-height:36px;padding:4px 10px">Entfernen</button></span></div><div style="margin-top:4px">'+esc(e.text).replace(/\n/g,'<br>')+'</div>'+(e.hilfe?'<div class="hint" style="margin-top:4px">Zeitaufwand / Fremdhilfe: '+esc(e.hilfe)+'</div>':'')+'</div>';
+  });
+  var hasInt=isNum(entDraft.int);
+  h+='<label class="f">Bereich</label><div class="chips">'+Object.keys(TYPES).map(function(k){return '<button data-act="etyp" data-v="'+k+'" aria-pressed="'+(entDraft.typ===k)+'">'+k+' · '+TYPES[k]+'</button>'}).join('')+'</div><div class="hint" style="margin-top:4px">'+TYPEHINT[entDraft.typ]+'</div>';
+  h+='<label class="f">Intensität <span class="hint">0 = keine, 10 = sehr stark</span></label><div class="row"><input type="range" min="0" max="10" step="1" data-ent="int" value="'+(hasInt?entDraft.int:5)+'" class="'+(hasInt?'':'unset')+'" aria-label="Intensität"><span class="val" id="val-ent">'+(hasInt?entDraft.int:'–')+'</span></div>';
+  h+='<label class="f">Konkrete Situation &amp; Auswirkung</label><textarea data-ent="text" placeholder="Was ist passiert und was ging dadurch nicht?">'+esc(entDraft.text)+'</textarea>';
+  h+='<label class="f">Zeitaufwand / Fremdhilfe <span class="hint">(optional)</span></label><input type="text" data-ent="hilfe" value="'+esc(entDraft.hilfe)+'" placeholder="z. B. Freund musste mich 30 Minuten begleiten">';
+  h+='<div style="margin-top:12px"><button class="primary" data-act="addent">'+(editIdx!=null?'Änderung speichern':'Eintrag hinzufügen')+'</button>'+(editIdx!=null?' <button class="ghost" data-act="cancelent" style="width:100%;margin-top:8px">Abbrechen</button>':'')+'</div><div class="msg" id="emsg" role="status"></div>';
+  return h;
+}
+function rerenderEnts(){var e=document.getElementById('ents');if(e)e.innerHTML=entsHTML()}
+function addEnt(){
+  var m=document.getElementById('emsg');
+  if(!isNum(entDraft.int)||!String(entDraft.text).trim()){m.textContent='Bitte Intensität einstellen und die Situation beschreiben.';return}
+  var day=Object.assign({},state.days[state.date]||{});day.date=state.date;
+  var rec={typ:entDraft.typ,int:entDraft.int,text:String(entDraft.text).trim(),hilfe:String(entDraft.hilfe||'').trim()};
+  var l=(day.eintraege||[]).slice();
+  if(editIdx!=null&&l[editIdx])l[editIdx]=rec;else l.push(rec);
+  day.eintraege=l;
+  var wasEdit=editIdx!=null;
+  store.saveDay(state.date,day).then(function(){editIdx=null;entDraft={typ:entDraft.typ,int:null,text:'',hilfe:''};rerenderEnts();var m2=document.getElementById('emsg');if(m2)m2.textContent=wasEdit?'Änderung gespeichert ✓':'Eintrag gespeichert ✓'}).catch(function(){m.textContent='Speichern hat nicht geklappt. Bitte noch einmal versuchen.'});
+}
+function editEnt(i){var e=((state.days[state.date]||{}).eintraege||[])[i];if(!e)return;editIdx=i;entDraft={typ:e.typ,int:e.int,text:e.text||'',hilfe:e.hilfe||''};rerenderEnts();var el=document.getElementById('ents');if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}
+function delEnt(i){
+  if(!confirm('Diesen Eintrag wirklich entfernen?'))return;editIdx=null;
+  var day=Object.assign({},state.days[state.date]||{});var l=(day.eintraege||[]).slice();l.splice(i,1);day.eintraege=l;
+  store.saveDay(state.date,day).then(rerenderEnts);
+}
+function entTable(st){
+  if(!st.ent.total)return '';
+  return '<table style="margin-top:10px"><tr><th>Beeinträchtigungen</th><th class="n">Anzahl</th><th class="n">Ø Intensität</th></tr>'+Object.keys(TYPES).map(function(t){var x=st.ent[t];return '<tr><td>'+t+' · '+TYPES[t]+'</td><td class="n">'+x.n+'</td><td class="n">'+(x.n?fmt(x.sum/x.n):'–')+'</td></tr>'}).join('')+'</table>';
+}
+function entCSV(){
+  var m=reportModel(),rows=[['Wochentag','Datum','Belastungstyp','Intensität (0-10)','Konkrete Situation & Auswirkung','Zeitaufwand / Fremdhilfe']];
+  m.keys.forEach(function(k){(state.days[k].eintraege||[]).forEach(function(e){rows.push([pdate(k).toLocaleDateString('de-DE',{weekday:'long'}),dshort(k),e.typ+' - '+(TYPES[e.typ]||''),e.int,e.text||'',e.hilfe||''])})});
+  return '﻿'+rows.map(function(r){return r.map(function(c){c=String(c).replace(/"/g,'""');return /[;"\n]/.test(c)?'"'+c+'"':c}).join(';')}).join('\r\n');
+}
+
+/* ---------- Verlauf ---------- */
+function backupJSON(){return JSON.stringify({app:'Mein Befinden',format:1,exportedAt:new Date().toISOString(),settings:state.settings,days:state.days},null,2)}
+function backupCard(){return '<div class="card"><h2>Datensicherung</h2><p class="hint" style="margin-top:0">Speichert alle Einträge und Einstellungen als Datei ('+Object.keys(state.days).length+' Tage). Bewahre sie sicher auf, sie enthält deine Gesundheitsdaten.</p><button class="ghost" data-act="backup" style="width:100%">Backup herunterladen (JSON)</button><div class="msg" id="bmsg" role="status"></div></div>'}
+function verlaufHTML(){return verlaufList()+backupCard()}
+function verlaufList(){
+  var keys=Object.keys(state.days).sort().reverse();
+  if(!keys.length)return '<div class="card">Noch keine Einträge. Starte unter „Heute“ mit deinem ersten Check-in.</div>';
+  var h='<div class="card list"><h2>Alle Tage</h2>';
+  keys.forEach(function(k){var d=state.days[k];
+    var dots=SL.map(function(s){var v=d[s]&&d[s].stimmung;return '<span class="dot" title="'+SLN[s]+'" style="'+(isNum(v)?'background:'+moodColor(v)+';border-color:'+moodColor(v):'')+'"></span>'}).join('');
+    var a=dayAvg(d,'stimmung'),an=dayAvg(d,'angst'),sc=dayAvg(d,'schmerz');
+    h+='<button class="item" data-act="open" data-v="'+k+'"><b>'+esc(dlong(k))+'</b> <span class="dots">'+dots+'</span><br><span class="hint">Ø Stimmung '+fmt(a)+' · Angst '+fmt(an)+' · Schmerz '+fmt(sc)+(d.abend&&d.abend.schlecht?' · Reflexion ✓':'')+(d.eintraege&&d.eintraege.length?' · '+d.eintraege.length+' Beeinträchtigung'+(d.eintraege.length>1?'en':''):'')+'</span></button>';
+  });
+  return h+'</div>';
+}
+
+/* ---------- Auswertung ---------- */
+function chartHTML(keys,r){
+  if(keys.length<2)return '<p class="hint">Für den Verlauf werden mindestens zwei dokumentierte Tage benötigt.</p>';
+  var W=340,H=200,L=26,R=70,T=10,B=26,N=nCal(r);
+  var ser=[{f:'stimmung',n:'Stimmung',c:'var(--s1)',dash:''},{f:'angst',n:'Angst',c:'var(--s2)',dash:'6 3'},{f:'schmerz',n:'Schmerz',c:'var(--s3)',dash:'2 3'}];
+  function X(k){var i=Math.round((pdate(k)-pdate(r.from))/864e5);return L+(N>1?i/(N-1):0)*(W-L-R)}
+  function Y(v){return T+(10-v)/10*(H-T-B)}
+  var g='';
+  [0,5,10].forEach(function(t){g+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(t)+'" y2="'+Y(t)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(Y(t)+4)+'" font-size="11" text-anchor="end" fill="var(--muted)">'+t+'</text>'});
+  g+='<text x="'+L+'" y="'+(H-6)+'" font-size="11" fill="var(--muted)">'+dshort(r.from).slice(0,5)+'</text><text x="'+(W-R)+'" y="'+(H-6)+'" font-size="11" text-anchor="end" fill="var(--muted)">'+dshort(r.to).slice(0,5)+'</text>';
+  var ends=[];
+  ser.forEach(function(s){
+    var pts=keys.map(function(k){var v=dayAvg(state.days[k],s.f);return v==null?null:{x:X(k),y:Y(v),k:k}}).filter(Boolean);
+    if(!pts.length)return;
+    g+='<polyline fill="none" stroke="'+s.c+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" '+(s.dash?'stroke-dasharray="'+s.dash+'" ':'')+'points="'+pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1)}).join(' ')+'"/>';
+    if(keys.length<=31)pts.forEach(function(p){g+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="3.5" fill="'+s.c+'" stroke="var(--surface)" stroke-width="2"/>'});
+    ends.push({n:s.n,y:pts[pts.length-1].y,x:pts[pts.length-1].x});
+  });
+  ends.sort(function(a,b){return a.y-b.y});
+  for(var i=1;i<ends.length;i++){if(ends[i].y-ends[i-1].y<13)ends[i].y=ends[i-1].y+13}
+  ends.forEach(function(e){g+='<text x="'+(W-R+6)+'" y="'+(e.y+4)+'" font-size="12" fill="var(--ink)">'+e.n+'</text>'});
+  g+='<line id="xhair" y1="'+T+'" y2="'+(H-B)+'" stroke="var(--muted)" stroke-dasharray="3 3" style="display:none"/>';
+  return '<div class="legend"><span><i style="border-color:var(--s1)"></i>Stimmung</span><span><i style="border-color:var(--s2);border-top-style:dashed"></i>Angst</span><span><i style="border-color:var(--s3);border-top-style:dotted"></i>Schmerz</span></div><div class="chartwrap" id="chartwrap"><svg id="chart" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Verlauf von Stimmung, Angst und Schmerz (Tagesdurchschnitt)" style="touch-action:pan-y">'+g+'</svg><div class="tip" id="tip"></div></div><p class="hint" style="margin:2px 0 0">Tagesdurchschnitt, Skala 0–10. Die Tabelle unten zeigt alle Werte.</p>';
+}
+function bindChart(keys,r){
+  var svg=document.getElementById('chart');if(!svg)return;
+  var tip=document.getElementById('tip'),xh=document.getElementById('xhair'),wrap=document.getElementById('chartwrap');
+  var W=340,L=26,R=70,N=nCal(r);
+  svg.addEventListener('pointermove',function(ev){
+    var b=svg.getBoundingClientRect(),px=(ev.clientX-b.left)/b.width*W;
+    var best=null,bd=1e9;keys.forEach(function(k){var i=Math.round((pdate(k)-pdate(r.from))/864e5),x=L+(N>1?i/(N-1):0)*(W-L-R);var d=Math.abs(x-px);if(d<bd){bd=d;best={k:k,x:x}}});
+    if(!best)return;
+    xh.setAttribute('x1',best.x);xh.setAttribute('x2',best.x);xh.style.display='';
+    var d=state.days[best.k];
+    tip.innerHTML='<b>'+dshort(best.k)+'</b><br>Stimmung '+fmt(dayAvg(d,'stimmung'))+'<br>Angst '+fmt(dayAvg(d,'angst'))+'<br>Schmerz '+fmt(dayAvg(d,'schmerz'));
+    tip.style.display='block';
+    var wx=best.x/W*b.width,tw=tip.offsetWidth;
+    tip.style.left=Math.max(0,Math.min(wx+10,wrap.clientWidth-tw))+'px';tip.style.top='6px';
+  });
+  svg.addEventListener('pointerleave',function(){tip.style.display='none';xh.style.display='none'});
+}
+function reportModel(){
+  var r=range(),keys=daysIn(r),st=stats(keys,r);
+  return {r:r,keys:keys,st:st};
+}
+function trio(d,f){return SL.map(function(s){var v=d[s]&&d[s][f];return isNum(v)?v:'–'}).join(' / ')}
+function reportHTML(full){
+  var m=reportModel(),r=m.r,st=m.st,o=state.opt,S=state.settings;
+  var h='';
+  if(full)h+='<h1 style="font-size:20px">Befindlichkeitsprotokoll – Selbstbeobachtung</h1>';
+  else h+='<h3>Befindlichkeitsprotokoll – Selbstbeobachtung</h3>';
+  h+='<p>'+(S.name?'<b>Name:</b> '+esc(S.name)+'<br>':'')+(S.az?'<b>Aktenzeichen:</b> '+esc(S.az)+'<br>':'')+'<b>Zeitraum:</b> '+dshort(r.from)+' – '+dshort(r.to)+'<br><b>Erstellt am:</b> '+dshort(todayStr())+'</p>';
+  h+='<p>Die folgenden Angaben beruhen auf meiner täglichen Selbsteinschätzung (morgens, mittags, abends) auf einer Skala von 0 bis 10. Stimmung: 0 = sehr schlecht, 10 = sehr gut. Angst und Schmerzen: 0 = nicht vorhanden, 10 = maximal. Es handelt sich um eigene Aufzeichnungen, nicht um eine ärztliche Diagnose.</p>';
+  if(!m.keys.length)return h+'<p><i>Im gewählten Zeitraum gibt es keine Einträge.</i></p>';
+  h+='<h3>Zusammenfassung</h3><ul style="margin:4px 0;padding-left:18px"><li>Dokumentierte Tage: '+st.dayCount+' von '+st.cal+'</li><li>Durchschnitt Stimmung: '+fmt(st.avg.stimmung)+' · Angst: '+fmt(st.avg.angst)+' · Schmerzen: '+fmt(st.avg.schmerz)+'</li><li>Tage mit einer durchschnittlichen Stimmung von 4 oder schlechter: '+st.low+'</li><li>Tage mit Angst von 7 oder höher (mind. einmal am Tag): '+st.hiA+'</li><li>Tage mit Schmerzen von 7 oder höher (mind. einmal am Tag): '+st.hiS+'</li>'+(st.sleepN?'<li>Nächte mit schlechtem Schlaf: '+st.badSleep+' von '+st.sleepN+' dokumentierten</li>':'')+(st.ent.total?'<li>Erfasste Beeinträchtigungen im Alltag: '+st.ent.total+' (A: '+st.ent.A.n+', B: '+st.ent.B.n+', C: '+st.ent.C.n+', D: '+st.ent.D.n+')</li>':'')+'</ul>';
+  h+='<h3>Durchschnitt nach Tageszeit</h3><table><tr><th></th><th class="n">Stimmung</th><th class="n">Angst</th><th class="n">Schmerzen</th></tr>'+SL.map(function(s){return '<tr><td>'+SLN[s]+'</td><td class="n">'+fmt(st.slot[s].stimmung)+'</td><td class="n">'+fmt(st.slot[s].angst)+'</td><td class="n">'+fmt(st.slot[s].schmerz)+'</td></tr>'}).join('')+'</table>';
+  h+='<h3>Einzelne Tage</h3><p style="font-size:12px;margin:2px 0">Werte: morgens / mittags / abends</p><table><tr><th>Datum</th><th class="n">Stimmung</th><th class="n">Angst</th><th class="n">Schmerzen</th><th class="n">Schlaf</th></tr>'+m.keys.map(function(k){var d=state.days[k];return '<tr><td>'+dshort(k).slice(0,6)+dshort(k).slice(8)+'</td><td class="n">'+trio(d,'stimmung')+'</td><td class="n">'+trio(d,'angst')+'</td><td class="n">'+trio(d,'schmerz')+'</td><td class="n">'+esc(d.morgen&&d.morgen.schlaf||'–')+'</td></tr>'}).join('')+'</table>';
+  var entRows=[];m.keys.forEach(function(k){(state.days[k].eintraege||[]).forEach(function(e){entRows.push({k:k,e:e})})});
+  if(entRows.length){
+    h+='<h3>Funktionsbeeinträchtigungen im Alltag (Eigenschilderung)</h3><p style="font-size:12px;margin:2px 0">A = Antrieb &amp; Vitalität, B = Kognitive Funktionen, C = Soziale Interaktion, D = Emotionale Regulation. Intensität: 0–10.</p><table><tr><th>Datum</th><th class="n">Bereich</th><th class="n">Int.</th><th>Situation &amp; Auswirkung</th><th>Zeitaufwand / Fremdhilfe</th></tr>'+entRows.map(function(x){return '<tr><td>'+dshort(x.k).slice(0,6)+dshort(x.k).slice(8)+'</td><td class="n">'+esc(x.e.typ)+'</td><td class="n">'+esc(x.e.int)+'</td><td>'+esc(x.e.text).replace(/\n/g,'<br>')+'</td><td>'+esc(x.e.hilfe||'')+'</td></tr>'}).join('')+'</table>';
+  }
+  function refl(field,title){
+    var rows=m.keys.filter(function(k){var a=state.days[k].abend;return a&&a[field]});
+    if(!rows.length)return '';
+    return '<h3>'+title+'</h3>'+rows.map(function(k){return '<p><b>'+dshort(k)+':</b> '+esc(state.days[k].abend[field]).replace(/\n/g,'<br>')+'</p>'}).join('');
+  }
+  if(o.nicht)h+=refl('schlecht','Was am Tag nicht gut lief (Abendreflexion)');
+  if(o.gut)h+=refl('gut','Was am Tag gut lief (Abendreflexion)');
+  if(o.notiz){
+    var nr=m.keys.map(function(k){var d=state.days[k],t=[];SL.forEach(function(s){if(d[s]&&d[s].notiz)t.push(SLN[s]+': '+d[s].notiz)});return t.length?'<p><b>'+dshort(k)+':</b> '+esc(t.join(' | ')).replace(/\n/g,'<br>')+'</p>':''}).join('');
+    if(nr)h+='<h3>Notizen</h3>'+nr;
+  }
+  if(full)h+='<p style="margin-top:36px">Ort, Datum: ____________________ &nbsp;&nbsp; Unterschrift: ____________________</p>';
+  return h;
+}
+function reportText(){
+  var d=document.createElement('div');d.innerHTML=reportHTML(false).replace(/<\/(p|h3|li|tr)>/g,'$&\n').replace(/<br>/g,'\n').replace(/<\/t[dh]>/g,' | ');
+  return d.textContent.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+function reportCSV(){
+  var o=state.opt,m=reportModel(),rows=[['Datum','Tageszeit','Stimmung','Angst','Schmerz','Schlaf','Was lief gut','Was lief nicht gut','Notiz']];
+  m.keys.forEach(function(k){var d=state.days[k];SL.forEach(function(s){var e=d[s];if(!e)return;rows.push([dshort(k),SLN[s],isNum(e.stimmung)?e.stimmung:'',isNum(e.angst)?e.angst:'',isNum(e.schmerz)?e.schmerz:'',s==='morgen'?(e.schlaf||''):'',o.gut?(e.gut||''):'',o.nicht?(e.schlecht||''):'',o.notiz?(e.notiz||''):''])})});
+  return '﻿'+rows.map(function(r){return r.map(function(c){c=String(c).replace(/"/g,'""');return /[;"\n]/.test(c)?'"'+c+'"':c}).join(';')}).join('\r\n');
+}
+function auswertungHTML(){
+  var r=range(),keys=daysIn(r),st=stats(keys,r),S=state.settings;
+  var presets=[['7','7 Tage'],['14','14 Tage'],['30','30 Tage'],['90','90 Tage'],['alle','Alles'],['eigen','Zeitraum']];
+  var h='<div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
+  if(state.range==='eigen')h+='<div class="row" style="margin-top:10px"><input type="date" id="rfrom" value="'+r.from+'" aria-label="Von"><input type="date" id="rto" value="'+r.to+'" aria-label="Bis"></div>';
+  h+='<p class="hint" style="margin:8px 0 0">'+dshort(r.from)+' – '+dshort(r.to)+'</p></div>';
+  if(!keys.length)return h+'<div class="card">Im gewählten Zeitraum gibt es noch keine Einträge.</div>';
+  h+='<div class="card"><h2>Überblick</h2><div class="kpis"><div class="kpi"><b>'+st.dayCount+' / '+st.cal+'</b><span>Tage dokumentiert</span></div><div class="kpi"><b>'+fmt(st.avg.stimmung)+'</b><span>Ø Stimmung (0–10)</span></div><div class="kpi"><b>'+fmt(st.avg.angst)+'</b><span>Ø Angst</span></div><div class="kpi"><b>'+fmt(st.avg.schmerz)+'</b><span>Ø Schmerzen</span></div><div class="kpi"><b>'+st.low+'</b><span>Tage mit Stimmung ≤ 4</span></div><div class="kpi"><b>'+st.hiA+'</b><span>Tage mit Angst ≥ 7</span></div></div>'+entTable(st)+'</div>';
+  h+='<div class="card"><h2>Verlauf</h2>'+chartHTML(keys,r)+'</div>';
+  h+='<div class="card"><h2>Bericht für das Sozialamt</h2><p class="hint" style="margin-top:0">Wähle, was im Bericht stehen soll. Prüfe den Text, bevor du ihn weitergibst.</p>'+
+   '<label class="f" style="margin-top:6px">Name</label><input type="text" id="sname" value="'+esc(S.name||'')+'">'+
+   '<label class="f">Aktenzeichen</label><input type="text" id="saz" value="'+esc(S.az||'')+'">'+
+   '<div class="check"><input type="checkbox" id="o-nicht" '+(state.opt.nicht?'checked':'')+'><label for="o-nicht">„Was nicht gut lief“ aufnehmen</label></div>'+
+   '<div class="check"><input type="checkbox" id="o-gut" '+(state.opt.gut?'checked':'')+'><label for="o-gut">„Was gut lief“ aufnehmen</label></div>'+
+   '<div class="check"><input type="checkbox" id="o-notiz" '+(state.opt.notiz?'checked':'')+'><label for="o-notiz">Notizen und Sonstiges aufnehmen</label></div>'+
+   '<div class="preview" id="preview">'+reportHTML(false)+'</div>'+
+   '<div class="btns"><button class="primary" data-act="copy">Bericht kopieren</button><button class="ghost" data-act="dlhtml" id="dlhtml">Als Datei speichern (HTML, zum Drucken oder als PDF)</button><button class="ghost" data-act="dlcsv" id="dlcsv">Tabelle speichern (CSV für Excel)</button><button class="ghost" data-act="dlent">Beeinträchtigungen speichern (CSV wie Symptomtagebuch)</button></div><div class="msg" id="rmsg" role="status"></div><textarea id="fallback" style="display:none;margin-top:8px" readonly></textarea></div>';
+  return h;
+}
+function refreshPreview(){var p=document.getElementById('preview');if(p)p.innerHTML=reportHTML(false)}
+function htmlDoc(){
+  return '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Befindlichkeitsprotokoll</title><style>body{font:14px/1.45 Arial,sans-serif;max-width:760px;margin:24px auto;padding:0 16px;color:#111}table{width:100%;border-collapse:collapse;margin:6px 0}th,td{padding:5px 6px;border-bottom:1px solid #ccc;text-align:left;font-size:13px}th.n,td.n{text-align:center}h3{margin:18px 0 4px;font-size:15px}</style></head><body>'+reportHTML(true)+'</body></html>';
+}
+async function download(name,data){
+  var msg=document.getElementById('rmsg')||document.getElementById('bmsg');
+  try{var type=/\.json$/.test(name)?'application/json':(/\.csv$/.test(name)?'text/csv;charset=utf-8':'text/html;charset=utf-8');
+    var url=URL.createObjectURL(new Blob([data],{type:type}));var a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},4000);
+    if(msg)msg.textContent='Datei wird gespeichert.';
+  }catch(e){if(msg)msg.textContent='Speichern ist hier nicht möglich. Nutze „Bericht kopieren“.'}
+}
+async function doCopy(){
+  var t=reportText(),msg=document.getElementById('rmsg');
+  try{await navigator.clipboard.writeText(t);msg.textContent='Bericht kopiert. Du kannst ihn jetzt in ein Dokument oder eine E-Mail einfügen.'}
+  catch(e){var f=document.getElementById('fallback');f.style.display='block';f.value=t;f.focus();f.select();msg.textContent='Automatisches Kopieren ist hier nicht möglich. Der Text steht unten, markiere ihn und kopiere ihn von Hand.'}
+}
+
+/* ---------- Rendering ---------- */
+function renderView(){
+  var v=document.getElementById('view');
+  document.querySelectorAll('#tabs button').forEach(function(b){b.setAttribute('aria-selected',String(b.getAttribute('data-v')===state.tab))});
+  if(state.tab==='heute'){v.innerHTML=heuteHTML();updateMood()}
+  else if(state.tab==='verlauf')v.innerHTML=verlaufHTML();
+  else{v.innerHTML=auswertungHTML();var r=range();bindChart(daysIn(r),r)}
+}
+function onData(){
+  if(state.tab==='heute'){
+    if(!dirty){loadDraft();var f=document.getElementById('form');if(f){f.innerHTML=formHTML();updateMood()}}
+    refreshSlots();
+    var en=document.getElementById('ents');if(en&&!en.contains(document.activeElement))en.innerHTML=entsHTML();
+  }else renderView();
+}
+function go(date,slot){state.date=date;if(slot)state.slot=slot;loadDraft();state.tab='heute';renderView()}
+
+document.addEventListener('click',function(ev){
+  var el=ev.target.closest('[data-act]');if(!el||el.disabled)return;
+  var a=el.getAttribute('data-act'),v=el.getAttribute('data-v');
+  if(a==='tab'){state.tab=v;if(v==='heute')loadDraft();renderView()}
+  else if(a==='slot'){state.slot=v;loadDraft();renderView()}
+  else if(a==='prev'){go(addDays(state.date,-1))}
+  else if(a==='next'){if(state.date<todayStr())go(addDays(state.date,1))}
+  else if(a==='today'){go(todayStr(),autoSlot())}
+  else if(a==='save'){doSave()}
+  else if(a==='clear'){delete draft[v];dirty=true;var f=document.getElementById('form');f.innerHTML=formHTML();updateMood()}
+  else if(a==='sleep'){draft.schlaf=draft.schlaf===v?undefined:v;dirty=true;var f2=document.getElementById('form');f2.innerHTML=formHTML();updateMood()}
+  else if(a==='open'){go(v,'abend')}
+  else if(a==='range'){state.range=v;renderView()}
+  else if(a==='copy'){doCopy()}
+  else if(a==='dlhtml'){download('Befindlichkeitsprotokoll_'+todayStr()+'.html',htmlDoc())}
+  else if(a==='backup'){download('Befinden_Backup_'+todayStr()+'.json',backupJSON())}
+  else if(a==='etyp'){entDraft.typ=v;rerenderEnts()}
+  else if(a==='addent'){addEnt()}
+  else if(a==='delent'){delEnt(+v)}
+  else if(a==='editent'){editEnt(+v)}
+  else if(a==='cancelent'){editIdx=null;entDraft={typ:entDraft.typ,int:null,text:'',hilfe:''};rerenderEnts()}
+  else if(a==='login'){doLogin()}
+  else if(a==='logout'){doLogout()}
+  else if(a==='dlent'){download('Beeintraechtigungen_'+todayStr()+'.csv',entCSV())}
+  else if(a==='dlcsv'){download('Befinden_Tabelle_'+todayStr()+'.csv',reportCSV())}
+});
+document.addEventListener('input',function(ev){
+  var t=ev.target,f=t.getAttribute&&t.getAttribute('data-field');
+  var fe=t.getAttribute&&t.getAttribute('data-ent');
+  if(fe){if(fe==='int'){entDraft.int=+t.value;t.classList.remove('unset');var ve=document.getElementById('val-ent');if(ve)ve.textContent=t.value}else entDraft[fe]=t.value;return}
+  if(f){
+    if(t.type==='range'){draft[f]=+t.value;t.classList.remove('unset');var vl=document.getElementById('val-'+f);if(vl)vl.textContent=t.value;if(f==='stimmung')updateMood()}
+    else draft[f]=t.value;
+    dirty=true;return;
+  }
+  if(t.id==='sname'){state.settings.name=t.value}
+  else if(t.id==='saz'){state.settings.az=t.value}
+  if(t.id==='sname'||t.id==='saz'){refreshPreview()}
+});
+document.addEventListener('change',function(ev){
+  var t=ev.target;
+  if(t.id==='sname'||t.id==='saz'){store.saveSettings()}
+  else if(t.id==='o-nicht'){state.opt.nicht=t.checked;refreshPreview()}
+  else if(t.id==='o-gut'){state.opt.gut=t.checked;refreshPreview()}
+  else if(t.id==='o-notiz'){state.opt.notiz=t.checked;refreshPreview()}
+  else if(t.id==='rfrom'){state.from=t.value;renderView()}
+  else if(t.id==='rto'){state.to=t.value;renderView()}
+});
+
+connect();
+})();
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(function(){});</script>
+</body>
+</html>
