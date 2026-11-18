@@ -69,7 +69,7 @@ td.n,th.n{text-align:center;white-space:nowrap}
 .preview p{margin:4px 0}
 .btns{display:grid;gap:8px;margin-top:10px}
 h2{font-size:17px;margin:0 0 6px}
-.entry{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--bg)}
+.rtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.rtabs button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 2px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;font:inherit;font-size:13px;min-height:62px}.rtabs button[aria-pressed=true]{border:2px solid var(--btn);background:var(--surface);font-weight:600}.rtabs .ri{font-size:20px;line-height:1}.rdot{position:absolute;top:6px;right:8px;width:8px;height:8px;border-radius:50%;background:var(--s3)}.rbody{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 14px 14px}.rl{display:block;font-weight:600;font-size:14px;margin:12px 0 4px}.rl.pos{color:var(--s3)}.rl.neg{color:var(--s2)}.rt{min-height:84px}.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rgrid input{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}.entry{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:var(--bg)}
 </style>
 </head>
 <body>
@@ -109,7 +109,7 @@ var draft={},dirty=false,msgText='';
 var store={saveDay:null,saveSettings:null};
 var TYPES={A:'Antrieb & Vitalität',B:'Kognitive Funktionen',C:'Soziale Interaktion',D:'Emotionale Regulation'};
 var TYPEHINT={A:'Morgentief, Entscheidungsunfähigkeit, Körperpflege/Haushalt',B:'Konzentration, Merkfähigkeit, Gedankenschleifen',C:'Rückzug, Angst vor Menschenmengen, Konflikte, Isolation',D:'Panikattacken, Weinerlichkeit, Reizbarkeit, Gefühllosigkeit'};
-var entDraft={typ:'A',int:null,text:'',hilfe:''};var editIdx=null;
+var entDraft={typ:'A',int:null,text:'',hilfe:''};var editIdx=null;var reflTab='schule';
 var RB=[['schule','🎓 Schule'],['arbeit','💼 Arbeit'],['fahren','🚆 Fahren'],['stress','⚡ Stress']];
 var RF=[['pos','Positiv','Was lief gut?'],['neg','Negativ','Was lief nicht gut?'],['zeit','Zeitaufwand','z. B. 2 Std. Fahrt, 30 Min. Erholung'],['hilfe','Fremdhilfe','Wer hat geholfen, wobei?']];
 function rv(o,b,f){return o&&o.refl&&o.refl[b]&&o.refl[b][f]||''}
@@ -246,12 +246,12 @@ function formHTML(){
   }
   if(s==='abend'){
     h+='<div class="card" style="background:var(--soft);margin-top:16px"><h2>Abendreflexion</h2>';
-    h+='<p class="hint" style="margin:0 0 4px">Trage ein, was in den Bereichen los war. Leere Felder kannst du einfach auslassen.</p>';
-    RB.forEach(function(b){
-      h+='<div class="entry" style="background:var(--surface)"><b>'+b[1]+'</b>';
-      RF.forEach(function(f){h+='<label class="f" style="margin:10px 0 3px;font-size:14px">'+f[1]+'</label><textarea data-refl="'+b[0]+'.'+f[0]+'" style="min-height:'+(f[0]==='pos'||f[0]==='neg'?'72':'44')+'px" placeholder="'+f[2]+'">'+esc(rv(draft,b[0],f[0]))+'</textarea>'});
-      h+='</div>';
-    });
+    h+='<div class="rtabs">'+RB.map(function(b){var filled=RF.some(function(f){return rv(draft,b[0],f[0])});return '<button data-act="rtab" data-v="'+b[0]+'" aria-pressed="'+(reflTab===b[0])+'"><span class="ri">'+b[1].split(' ')[0]+'</span>'+b[1].replace(/^\S+\s/,'')+(filled?'<i class="rdot"></i>':'')+'</button>'}).join('')+'</div>';
+    h+='<div class="rbody">';
+    h+='<label class="rl pos">👍 Positiv</label><textarea data-refl="'+reflTab+'.pos" class="rt" placeholder="Was lief gut?">'+esc(rv(draft,reflTab,'pos'))+'</textarea>';
+    h+='<label class="rl neg">👎 Negativ</label><textarea data-refl="'+reflTab+'.neg" class="rt" placeholder="Was lief nicht gut?">'+esc(rv(draft,reflTab,'neg'))+'</textarea>';
+    h+='<div class="rgrid"><div><label class="rl">⏱ Zeitaufwand</label><input type="text" data-refl="'+reflTab+'.zeit" value="'+esc(rv(draft,reflTab,'zeit'))+'" placeholder="z. B. 2 Std."></div><div><label class="rl">🤝 Fremdhilfe</label><input type="text" data-refl="'+reflTab+'.hilfe" value="'+esc(rv(draft,reflTab,'hilfe'))+'" placeholder="Wer, wobei?"></div></div>';
+    h+='</div>';
     if(draft.gut||draft.schlecht){
       h+='<div class="entry" style="background:var(--surface)"><b>Allgemein (frühere Einträge)</b><label class="f" style="margin:10px 0 3px;font-size:14px">Gut</label><textarea data-field="gut" style="min-height:60px">'+esc(draft.gut||'')+'</textarea><label class="f" style="margin:10px 0 3px;font-size:14px">Nicht gut</label><textarea data-field="schlecht" style="min-height:60px">'+esc(draft.schlecht||'')+'</textarea></div>';
     }
@@ -523,6 +523,7 @@ document.addEventListener('click',function(ev){
   else if(a==='delent'){delEnt(+v)}
   else if(a==='editent'){editEnt(+v)}
   else if(a==='cancelent'){editIdx=null;entDraft={typ:entDraft.typ,int:null,text:'',hilfe:''};rerenderEnts()}
+  else if(a==='rtab'){reflTab=v;var f3=document.getElementById('form');f3.innerHTML=formHTML();updateMood()}
   else if(a==='login'){doLogin()}
   else if(a==='logout'){doLogout()}
   else if(a==='dlent'){download('Beeintraechtigungen_'+todayStr()+'.csv',entCSV())}
