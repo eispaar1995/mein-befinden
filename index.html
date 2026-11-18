@@ -104,7 +104,7 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){retur
 function fmt(v,d){if(v==null)return '–';d=d==null?1:d;return v.toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d})}
 function isNum(v){return typeof v==='number'&&isFinite(v)}
 
-var state={days:{},settings:{name:'Marie Janzen',az:'42S0616478'},date:todayStr(),slot:autoSlot(),tab:'heute',range:'30',from:'',to:'',opt:{nicht:true,gut:true,notiz:false},mode:'local'};
+var state={days:{},settings:{name:'Marie Janzen',az:'42S0616478'},date:todayStr(),slot:autoSlot(),tab:'heute',profile:'gdb',range:'30',from:'',to:'',opt:{nicht:true,gut:true,notiz:false},mode:'local'};
 var draft={},dirty=false,msgText='';
 var store={saveDay:null,saveSettings:null};
 var TYPES={A:'Antrieb & Vitalität',B:'Kognitive Funktionen',C:'Soziale Interaktion',D:'Emotionale Regulation'};
@@ -341,8 +341,10 @@ function entCSV(){
 }
 
 /* ---------- Verlauf ---------- */
+var LB='befinden_last_backup';
+function lastBackup(){try{return localStorage.getItem(LB)}catch(e){return null}}
 function backupJSON(){return JSON.stringify({app:'Mein Befinden',format:1,exportedAt:new Date().toISOString(),settings:state.settings,days:state.days},null,2)}
-function backupCard(){return '<div class="card"><h2>Datensicherung</h2><p class="hint" style="margin-top:0">Speichert alle Einträge und Einstellungen als Datei ('+Object.keys(state.days).length+' Tage). Bewahre sie sicher auf, sie enthält deine Gesundheitsdaten.</p><button class="ghost" data-act="backup" style="width:100%">Backup herunterladen (JSON)</button><div class="msg" id="bmsg" role="status"></div></div>'}
+function backupCard(){var lb=lastBackup(),old=!lb||(pdate(todayStr())-pdate(lb))/864e5>=7;return '<div class="card"><h2>Datensicherung</h2>'+(old?'<div class="note">Dein letztes Backup auf diesem Gerät ist '+(lb?'vom '+dshort(lb):'noch nicht gemacht')+'. Einmal pro Woche ist sinnvoll.</div>':'<p class="hint" style="margin:0 0 6px">Letztes Backup: '+dshort(lb)+'</p>')+'<p class="hint" style="margin-top:0">Zusätzlich legt die Datenbank jeden Sonntag automatisch eine Sicherungskopie an (26 Wochen aufbewahrt).</p><p class="hint" style="margin-top:0">Speichert alle Einträge und Einstellungen als Datei ('+Object.keys(state.days).length+' Tage). Bewahre sie sicher auf, sie enthält deine Gesundheitsdaten.</p><button class="ghost" data-act="backup" style="width:100%">Backup herunterladen (JSON)</button><div class="msg" id="bmsg" role="status"></div></div>'}
 function verlaufHTML(){return verlaufList()+backupCard()}
 function verlaufList(){
   var keys=Object.keys(state.days).sort().reverse();
@@ -405,10 +407,11 @@ function trio(d,f){return SL.map(function(s){var v=d[s]&&d[s][f];return isNum(v)
 function reportHTML(full){
   var m=reportModel(),r=m.r,st=m.st,o=state.opt,S=state.settings;
   var h='';
-  if(full)h+='<h1 style="font-size:20px">Befindlichkeitsprotokoll – Selbstbeobachtung</h1>';
-  else h+='<h3>Befindlichkeitsprotokoll – Selbstbeobachtung</h3>';
-  h+='<p>'+(S.name?'<b>Name:</b> '+esc(S.name)+'<br>':'')+(S.az?'<b>Aktenzeichen:</b> '+esc(S.az)+'<br>':'')+'<b>Zeitraum:</b> '+dshort(r.from)+' – '+dshort(r.to)+'<br><b>Erstellt am:</b> '+dshort(todayStr())+'</p>';
-  h+='<p>Die folgenden Angaben beruhen auf meiner täglichen Selbsteinschätzung (morgens, mittags, abends) auf einer Skala von 0 bis 10. Stimmung: 0 = sehr schlecht, 10 = sehr gut. Angst und Schmerzen: 0 = nicht vorhanden, 10 = maximal. Es handelt sich um eigene Aufzeichnungen, nicht um eine ärztliche Diagnose.</p>';
+  var psy=state.profile==='psy',ttl=psy?'Verlaufsbericht – Selbstbeobachtung für die Therapie':'Befindlichkeitsprotokoll – Selbstbeobachtung';
+  if(full)h+='<h1 style="font-size:20px">'+ttl+'</h1>';
+  else h+='<h3>'+ttl+'</h3>';
+  h+='<p>'+(S.name?'<b>Name:</b> '+esc(S.name)+'<br>':'')+(S.az&&!psy?'<b>Aktenzeichen:</b> '+esc(S.az)+'<br>':'')+'<b>Zeitraum:</b> '+dshort(r.from)+' – '+dshort(r.to)+'<br><b>Erstellt am:</b> '+dshort(todayStr())+'</p>';
+  h+='<p>Die folgenden Angaben beruhen auf meiner täglichen Selbsteinschätzung (morgens, mittags, abends) auf einer Skala von 0 bis 10. Stimmung: 0 = sehr schlecht, 10 = sehr gut. Angst und Schmerzen: 0 = nicht vorhanden, 10 = maximal. Es handelt sich um eigene Aufzeichnungen, nicht um eine ärztliche Diagnose.'+(psy?' Sie sollen als Gesprächsgrundlage dienen.':'')+'</p>';
   if(!m.keys.length)return h+'<p><i>Im gewählten Zeitraum gibt es keine Einträge.</i></p>';
   h+='<h3>Zusammenfassung</h3><ul style="margin:4px 0;padding-left:18px"><li>Dokumentierte Tage: '+st.dayCount+' von '+st.cal+'</li><li>Durchschnitt Stimmung: '+fmt(st.avg.stimmung)+' · Angst: '+fmt(st.avg.angst)+' · Schmerzen: '+fmt(st.avg.schmerz)+'</li><li>Tage mit einer durchschnittlichen Stimmung von 4 oder schlechter: '+st.low+'</li><li>Tage mit Angst von 7 oder höher (mind. einmal am Tag): '+st.hiA+'</li><li>Tage mit Schmerzen von 7 oder höher (mind. einmal am Tag): '+st.hiS+'</li>'+(st.sleepN?'<li>Nächte mit schlechtem Schlaf: '+st.badSleep+' von '+st.sleepN+' dokumentierten</li>':'')+(st.ent.total?'<li>Erfasste Beeinträchtigungen im Alltag: '+st.ent.total+' (A: '+st.ent.A.n+', B: '+st.ent.B.n+', C: '+st.ent.C.n+', D: '+st.ent.D.n+')</li>':'')+'</ul>';
   h+='<h3>Durchschnitt nach Tageszeit</h3><table><tr><th></th><th class="n">Stimmung</th><th class="n">Angst</th><th class="n">Schmerzen</th></tr>'+SL.map(function(s){return '<tr><td>'+SLN[s]+'</td><td class="n">'+fmt(st.slot[s].stimmung)+'</td><td class="n">'+fmt(st.slot[s].angst)+'</td><td class="n">'+fmt(st.slot[s].schmerz)+'</td></tr>'}).join('')+'</table>';
@@ -438,7 +441,7 @@ function reportHTML(full){
     var nr=m.keys.map(function(k){var d=state.days[k],t=[];SL.forEach(function(s){if(d[s]&&d[s].notiz)t.push(SLN[s]+': '+d[s].notiz)});return t.length?'<p><b>'+dshort(k)+':</b> '+esc(t.join(' | ')).replace(/\n/g,'<br>')+'</p>':''}).join('');
     if(nr)h+='<h3>Notizen</h3>'+nr;
   }
-  if(full)h+='<p style="margin-top:36px">Ort, Datum: ____________________ &nbsp;&nbsp; Unterschrift: ____________________</p>';
+  if(full&&!psy)h+='<p style="margin-top:36px">Ort, Datum: ____________________ &nbsp;&nbsp; Unterschrift: ____________________</p>';
   return h;
 }
 function reportText(){
@@ -453,7 +456,7 @@ function reportCSV(){
 function auswertungHTML(){
   var r=range(),keys=daysIn(r),st=stats(keys,r),S=state.settings;
   var presets=[['7','7 Tage'],['14','14 Tage'],['30','30 Tage'],['90','90 Tage'],['alle','Alles'],['eigen','Zeitraum']];
-  var h='<div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
+  var h='<div class="card"><h2>Bericht für</h2><div class="chips"><button data-act="profile" data-v="gdb" aria-pressed="'+(state.profile==='gdb')+'">Sozialamt / GdB</button><button data-act="profile" data-v="psy" aria-pressed="'+(state.profile==='psy')+'">Psychologin</button></div><p class="hint" style="margin:8px 0 0">'+(state.profile==='psy'?'Mit allen Reflexionen und Notizen, ohne Aktenzeichen und Unterschriftszeile.':'Sachlich, mit Aktenzeichen, Funktionsbeeinträchtigungen und Unterschriftszeile.')+'</p></div><div class="card"><h2>Zeitraum</h2><div class="chips">'+presets.map(function(p){return '<button data-act="range" data-v="'+p[0]+'" aria-pressed="'+(state.range===p[0])+'">'+p[1]+'</button>'}).join('')+'</div>';
   if(state.range==='eigen')h+='<div class="row" style="margin-top:10px"><input type="date" id="rfrom" value="'+r.from+'" aria-label="Von"><input type="date" id="rto" value="'+r.to+'" aria-label="Bis"></div>';
   h+='<p class="hint" style="margin:8px 0 0">'+dshort(r.from)+' – '+dshort(r.to)+'</p></div>';
   if(!keys.length)return h+'<div class="card">Im gewählten Zeitraum gibt es noch keine Einträge.</div>';
@@ -466,7 +469,7 @@ function auswertungHTML(){
    '<div class="check"><input type="checkbox" id="o-gut" '+(state.opt.gut?'checked':'')+'><label for="o-gut">„Was gut lief“ aufnehmen</label></div>'+
    '<div class="check"><input type="checkbox" id="o-notiz" '+(state.opt.notiz?'checked':'')+'><label for="o-notiz">Notizen und Sonstiges aufnehmen</label></div>'+
    '<div class="preview" id="preview">'+reportHTML(false)+'</div>'+
-   '<div class="btns"><button class="primary" data-act="copy">Bericht kopieren</button><button class="ghost" data-act="dlhtml" id="dlhtml">Als Datei speichern (HTML, zum Drucken oder als PDF)</button><button class="ghost" data-act="dlcsv" id="dlcsv">Tabelle speichern (CSV für Excel)</button><button class="ghost" data-act="dlent">Beeinträchtigungen speichern (CSV wie Symptomtagebuch)</button></div><div class="msg" id="rmsg" role="status"></div><textarea id="fallback" style="display:none;margin-top:8px" readonly></textarea></div>';
+   '<div class="btns"><button class="ghost" data-act="copy">Bericht kopieren</button><button class="primary" data-act="pdf">Als PDF speichern oder drucken</button><button class="ghost" data-act="dlhtml" id="dlhtml">Als Datei speichern (HTML)</button><button class="ghost" data-act="dlcsv" id="dlcsv">Tabelle speichern (CSV für Excel)</button><button class="ghost" data-act="dlent">Beeinträchtigungen speichern (CSV wie Symptomtagebuch)</button></div><div class="msg" id="rmsg" role="status"></div><textarea id="fallback" style="display:none;margin-top:8px" readonly></textarea></div>';
   return h;
 }
 function refreshPreview(){var p=document.getElementById('preview');if(p)p.innerHTML=reportHTML(false)}
@@ -479,6 +482,14 @@ async function download(name,data){
     var url=URL.createObjectURL(new Blob([data],{type:type}));var a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},4000);
     if(msg)msg.textContent='Datei wird gespeichert.';
   }catch(e){if(msg)msg.textContent='Speichern ist hier nicht möglich. Nutze „Bericht kopieren“.'}
+}
+function openPdf(){
+  var msg=document.getElementById('rmsg');
+  var w=window.open('','_blank');
+  if(!w){if(msg)msg.textContent='Das Fenster wurde blockiert. Erlaube Pop-ups für diese Seite und versuche es noch einmal.';return}
+  w.document.open();w.document.write(htmlDoc().replace('</body>','<p style="font-size:11px;color:#666;margin-top:24px">Vertraulich: enthält Gesundheitsdaten.</p></body>'));w.document.close();w.focus();
+  setTimeout(function(){try{w.print()}catch(e){}},400);
+  if(msg)msg.textContent='Im Druckdialog „Als PDF speichern“ wählen.';
 }
 async function doCopy(){
   var t=reportText(),msg=document.getElementById('rmsg');
@@ -518,7 +529,7 @@ document.addEventListener('click',function(ev){
   else if(a==='range'){state.range=v;renderView()}
   else if(a==='copy'){doCopy()}
   else if(a==='dlhtml'){download('Befindlichkeitsprotokoll_'+todayStr()+'.html',htmlDoc())}
-  else if(a==='backup'){download('Befinden_Backup_'+todayStr()+'.json',backupJSON())}
+  else if(a==='backup'){download('Befinden_Backup_'+todayStr()+'.json',backupJSON());try{localStorage.setItem(LB,todayStr())}catch(e){}setTimeout(function(){if(state.tab==='verlauf')renderView()},300)}
   else if(a==='etyp'){entDraft.typ=v;rerenderEnts()}
   else if(a==='addent'){addEnt()}
   else if(a==='delent'){delEnt(+v)}
@@ -526,6 +537,8 @@ document.addEventListener('click',function(ev){
   else if(a==='cancelent'){editIdx=null;entDraft={typ:entDraft.typ,int:null,text:'',hilfe:''};rerenderEnts()}
   else if(a==='rtab'){reflTab=v;var f3=document.getElementById('form');f3.innerHTML=formHTML();updateMood()}
   else if(a==='smiley'){draft.stimmung=+v;dirty=true;var f4=document.getElementById('form');f4.innerHTML=formHTML();updateMood()}
+  else if(a==='profile'){state.profile=v;state.opt=v==='psy'?{nicht:true,gut:true,notiz:true}:{nicht:true,gut:true,notiz:false};renderView()}
+  else if(a==='pdf'){openPdf()}
   else if(a==='login'){doLogin()}
   else if(a==='logout'){doLogout()}
   else if(a==='dlent'){download('Beeintraechtigungen_'+todayStr()+'.csv',entCSV())}
